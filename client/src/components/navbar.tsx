@@ -35,7 +35,7 @@ export function Navbar() {
               <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
                 <Box className="text-primary-foreground text-xl" size={20} />
               </div>
-              <span className="text-xl font-bold text-foreground">SaaSFlow</span>
+              <span className="text-xl font-bold text-foreground">Leveling Up Data</span>
             </Link>
             
             <div className="hidden md:flex items-center space-x-8">
