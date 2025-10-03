@@ -74,8 +74,8 @@ export default function Dashboard() {
     );
   }
 
-  const user = userData?.user;
-  const subscription = userData?.subscription;
+  const user = (userData as any)?.user;
+  const subscription = (userData as any)?.subscription;
 
   // Mock data for demo
   const stats = {

@@ -15,9 +15,10 @@ interface AuthModalProps {
   mode: 'signin' | 'signup';
   onClose: () => void;
   onModeChange: (mode: 'signin' | 'signup') => void;
+  onSuccess?: () => void;
 }
 
-export function AuthModal({ open, mode, onClose, onModeChange }: AuthModalProps) {
+export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: AuthModalProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -60,7 +61,11 @@ export function AuthModal({ open, mode, onClose, onModeChange }: AuthModalProps)
       });
       
       onClose();
-      setLocation('/pricing');
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        setLocation('/pricing');
+      }
     } catch (error: any) {
       toast({
         title: "Registration Failed",
@@ -85,7 +90,11 @@ export function AuthModal({ open, mode, onClose, onModeChange }: AuthModalProps)
       });
       
       onClose();
-      setLocation('/dashboard');
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        setLocation('/dashboard');
+      }
     } catch (error: any) {
       toast({
         title: "Sign In Failed",

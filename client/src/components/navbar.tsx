@@ -144,7 +144,7 @@ export function Navbar() {
         open={authModal.open} 
         mode={authModal.mode}
         onClose={() => setAuthModal({ open: false, mode: 'signup' })}
-        onModeChange={(mode) => setAuthModal({ open: true, mode })}
+        onModeChange={(mode: 'signin' | 'signup') => setAuthModal({ open: true, mode })}
       />
     </>
   );

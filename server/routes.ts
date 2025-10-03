@@ -5,17 +5,17 @@ import { storage } from "./storage";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 
-// Check for required Stripe keys
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.error('Missing required environment variables:');
-  console.error('STRIPE_SECRET_KEY - Get from https://dashboard.stripe.com/apikeys (starts with sk_)');
-  console.error('Also needed: VITE_STRIPE_PUBLIC_KEY for frontend (starts with pk_)');
-  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
-}
+// Initialize Stripe if API key is available
+let stripe: Stripe | null = null;
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
-});
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2025-09-30.clover",
+  });
+} else {
+  console.warn('⚠️  Stripe API keys not configured. Payment features will be disabled.');
+  console.warn('To enable payments, add STRIPE_SECRET_KEY and VITE_STRIPE_PUBLIC_KEY to your secrets.');
+}
 
 // Login schema
 const loginSchema = z.object({
@@ -118,6 +118,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create subscription
   app.post('/api/create-subscription', async (req, res) => {
     try {
+      if (!stripe) {
+        return res.status(503).json({ message: "Payment processing is not configured. Please contact support." });
+      }
+
       const { userId, stripePriceId } = req.body;
       
       if (!userId || !stripePriceId) {
@@ -195,6 +199,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Stripe webhook handler
   app.post('/api/webhook', async (req, res) => {
+    if (!stripe) {
+      return res.status(503).json({ message: "Payment processing is not configured" });
+    }
+
     const sig = req.headers['stripe-signature'] as string;
     
     try {
@@ -221,8 +229,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         case 'invoice.payment_succeeded':
           const invoice = event.data.object as Stripe.Invoice;
-          if (invoice.subscription) {
-            const sub = await storage.getSubscriptionByStripeId(invoice.subscription as string);
+          if (invoice.subscription && typeof invoice.subscription === 'string') {
+            const sub = await storage.getSubscriptionByStripeId(invoice.subscription);
             if (sub) {
               await storage.updateSubscription(sub.id, {
                 status: 'active'
@@ -233,8 +241,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         case 'invoice.payment_failed':
           const failedInvoice = event.data.object as Stripe.Invoice;
-          if (failedInvoice.subscription) {
-            const sub = await storage.getSubscriptionByStripeId(failedInvoice.subscription as string);
+          if (failedInvoice.subscription && typeof failedInvoice.subscription === 'string') {
+            const sub = await storage.getSubscriptionByStripeId(failedInvoice.subscription);
             if (sub) {
               await storage.updateSubscription(sub.id, {
                 status: 'past_due'

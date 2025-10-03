@@ -126,6 +126,7 @@ export class MemStorage implements IStorage {
     const subscription: Subscription = {
       ...insertSubscription,
       id,
+      trialEnd: insertSubscription.trialEnd ?? null,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -163,7 +164,10 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const product: Product = {
       ...insertProduct,
-      id
+      id,
+      maxUsers: insertProduct.maxUsers ?? null,
+      storage: insertProduct.storage ?? null,
+      priority: insertProduct.priority ?? null
     };
     this.products.set(id, product);
     return product;
