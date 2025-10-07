@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Navbar } from "@/components/navbar";
+import { Chatbot } from "@/components/chatbot";
 import Home from "@/pages/home";
 import Pricing from "@/pages/pricing";
 import Dashboard from "@/pages/dashboard";
@@ -30,6 +31,7 @@ function App() {
           <Navbar />
           <Router />
           <Toaster />
+          <Chatbot />
         </div>
       </TooltipProvider>
     </QueryClientProvider>

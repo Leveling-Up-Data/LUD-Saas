@@ -1,0 +1,202 @@
+Integrate a floating chatbot on the website. The chatbot must support text and file interactions (PDF, DOC, DOCX, TXT), interact with the backend via a given webhook URL, and display responses in a chat-style interface. Implementation must follow the logic, UI, and interaction flow described below—replicate the code structure and behavior exactly.
+
+Frontend Chatbot Requirements:
+
+Floating Button & Chat Window:
+
+A fixed floating chat button (💬).
+
+When clicked, opens a chat window at the bottom corner of the screen.
+
+Window includes a header ("RAG Chatbot"), a close icon (✖), message history, file upload, text input, and send button.
+
+File Upload:
+
+Allows user to select a .pdf, .doc, .docx, or .txt file.
+
+Filename is displayed after selection (max width, ellipsis).
+
+If file is selected and sent, send filename/metadata to the backend.
+
+Text & File Send Logic:
+
+Supports sending message with or without a file.
+
+If sending a file, use multipart/form-data and attach file along with metadata fields:
+
+event, file_name, file_mime, file_size, and optionally query if text is present.
+
+If only text, send as JSON: { event: "text", query: "<user_text>" }.
+
+Backend Request:
+
+POST to the backend webhook URL:
+
+If file present: use FormData.
+
+If only text: use JSON and set Content-Type: application/json.
+
+Rendering Messages:
+
+User messages (text, or "Sent a file: ...").
+
+Bot responses, as returned from the backend:
+
+If backend response includes a file_url, display a download link as a bot message.
+
+If only text, display text inside the chat.
+
+Scroll chat to bottom on every new message.
+
+Show generic error if backend unreachable.
+
+Additional Interaction:
+
+Pressing Enter in the text box triggers send.
+
+File selection updates the filename display.
+
+On page unload, revoke any created blob URLs to avoid leaks.
+
+Code (HTML + JS):
+
+Replit agent must use this code as-is and only change the BACKEND_URL as appropriate.
+
+xml
+<body>
+<!-- Floating Button -->
+<button id="chatbot-button">💬</button>
+<!-- Chat Window -->
+<div id="chatbot-window">
+  <div id="chatbot-header">
+    RAG Chatbot
+    <span id="chatbot-close">✖</span>
+  </div>
+  <div id="chatbot-messages"></div>
+  <div id="chatbot-file-row">
+    <input type="file" id="chatbot-file" accept=".pdf,.doc,.docx,.txt" />
+    <div id="chatbot-filename" style="font-size:12px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;"></div>
+  </div>
+  <div id="chatbot-input">
+    <input type="text" id="chatbot-text" placeholder="Type a message..." />
+    <button id="chatbot-send">➤</button>
+  </div>
+</div>
+<script>
+const chatBtn = document.getElementById('chatbot-button');
+const chatWindow = document.getElementById('chatbot-window');
+const closeBtn = document.getElementById('chatbot-close');
+const sendBtn = document.getElementById('chatbot-send');
+const inputField = document.getElementById('chatbot-text');
+const messages = document.getElementById('chatbot-messages');
+const BACKEND_URL = "https://n8n.levelingupdata.com/webhook-test/OpenWebUITestAgent"; // Change to your RAG workflow URL if needed
+const fileInput = document.getElementById('chatbot-file');
+const filenameDisplay = document.getElementById('chatbot-filename');
+
+// Open/close
+chatBtn.addEventListener('click', () => chatWindow.style.display = "flex");
+closeBtn.addEventListener('click', () => chatWindow.style.display = "none");
+
+function appendMessage(text, sender) {
+  const div = document.createElement('div');
+  div.className = `message ${sender}`;
+  div.innerText = text;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+async function sendMessage() {
+  const text = inputField.value.trim();
+  const file = fileInput.files && fileInput.files[0];
+  if (!text && !file) return;
+  let userMsg = text || "[file attached]";
+  if (file && !text) userMsg = `Sent a file: ${file.name}`;
+  if (file && text) userMsg = `${text} (with file: ${file.name})`;
+  appendMessage(userMsg, "user");
+  inputField.value = "";
+  filenameDisplay.innerText = "";
+  fileInput.value = null;
+
+  try {
+    let res;
+    if (file) {
+      const form = new FormData();
+      if (text) form.append('query', text);
+      form.append('file', file, file.name);
+      form.append('event', text ? 'text_with_file' : 'file');
+      form.append('file_name', file.name);
+      form.append('file_mime', file.type || 'application/octet-stream');
+      form.append('file_size', String(file.size));
+      res = await fetch(BACKEND_URL, { method: 'POST', body: form });
+    } else {
+      const payload = { event: 'text', query: text };
+      res = await fetch(BACKEND_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    }
+    const contentType = res.headers.get('content-type') || '';
+    let data;
+    if (contentType.includes('application/json')) data = await res.json();
+    else data = await res.text();
+    let reply = "Sorry, I didn’t get that.";
+    if (Array.isArray(data) && data.length > 0) {
+      reply = data[0].output || JSON.stringify(data[0]);
+    } else if (typeof data === 'object') {
+      reply = data.output || data.answer || JSON.stringify(data);
+    } else {
+      reply = data;
+    }
+    appendMessage(reply, "bot");
+    // File download link if present
+    try {
+      let fileUrl = null;
+      if (data && typeof data === 'object') {
+        fileUrl = data.file_url || data.url || data.download_url || null;
+      }
+      if (!fileUrl && file) {
+        fileUrl = URL.createObjectURL(file);
+        window._lastBlobUrl = fileUrl;
+      }
+      if (fileUrl) {
+        const a = document.createElement('a');
+        a.href = fileUrl;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.innerText = 'Download file';
+        a.style.display = 'inline-block';
+        a.style.marginTop = '6px';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message bot';
+        wrapper.appendChild(a);
+        messages.appendChild(wrapper);
+        messages.scrollTop = messages.scrollHeight;
+      }
+    } catch (e) { }
+  } catch (err) {
+    appendMessage("⚠️ Backend error", "bot");
+  }
+}
+sendBtn.addEventListener('click', sendMessage);
+inputField.addEventListener('keypress', e => { if (e.key === "Enter") sendMessage(); });
+fileInput.addEventListener('change', () => {
+  const f = fileInput.files && fileInput.files[0];
+  if (f) filenameDisplay.innerText = f.name;
+  else filenameDisplay.innerText = '';
+});
+window.addEventListener('unload', () => {
+  try {
+    if (window._lastBlobUrl) {
+      URL.revokeObjectURL(window._lastBlobUrl);
+      window._lastBlobUrl = null;
+    }
+  } catch (e) { }
+});
+</script>
+</body>
+Instructions:
+
+Use this code block as the implementation reference.
+
+Do not change any logic or element structure other than the backend URL.
+
+Style, interaction, and all behaviors must match exactly.
+
+Ensure all parts work end-to-end in a modern web browser.
