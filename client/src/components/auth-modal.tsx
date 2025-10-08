@@ -27,6 +27,7 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
     username: '',
     email: '',
     password: '',
+    passwordConfirm: '',
     terms: false
   });
 
@@ -49,17 +50,27 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
     try {
       // Generate username from email if not provided
       const username = formData.username || formData.email.split('@')[0];
-      
-      await pb.create(formData.email, formData.password, username, formData.name);
-      
+      // Ensure password confirmation matches
+      if (formData.password !== formData.passwordConfirm) {
+        toast({
+          title: 'Password Mismatch',
+          description: 'Password and confirmation do not match.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
+      await pb.create(formData.email, formData.password, formData.passwordConfirm, username, formData.name);
+
       // Auto sign in after registration
       await pb.authWithPassword(formData.email, formData.password);
-      
+
       toast({
         title: "Welcome to SaaSFlow!",
         description: "Your account has been created successfully.",
       });
-      
+
       onClose();
       if (onSuccess) {
         onSuccess();
@@ -80,15 +91,15 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       await pb.authWithPassword(formData.email, formData.password);
-      
+
       toast({
         title: "Welcome back!",
         description: "You have been signed in successfully.",
       });
-      
+
       onClose();
       if (onSuccess) {
         onSuccess();
@@ -112,6 +123,7 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
       username: '',
       email: '',
       password: '',
+      passwordConfirm: '',
       terms: false
     });
   };
@@ -190,6 +202,22 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
           </div>
 
           {mode === 'signup' && (
+            <div className="space-y-2">
+              <Label htmlFor="passwordConfirm">Confirm Password</Label>
+              <Input
+                id="passwordConfirm"
+                type="password"
+                placeholder="••••••••"
+                value={formData.passwordConfirm}
+                onChange={(e) => handleInputChange('passwordConfirm', e.target.value)}
+                required
+                minLength={8}
+                data-testid="input-password-confirm"
+              />
+            </div>
+          )}
+
+          {mode === 'signup' && (
             <div className="flex items-start space-x-2">
               <Checkbox
                 id="terms"
@@ -210,9 +238,9 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
             </div>
           )}
 
-          <Button 
-            type="submit" 
-            className="w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90" 
+          <Button
+            type="submit"
+            className="w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90"
             disabled={loading}
             data-testid={`button-${mode}`}
           >
