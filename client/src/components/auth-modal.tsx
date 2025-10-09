@@ -35,87 +35,132 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.terms) {
+const handleSignUp = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!formData.terms) {
+    toast({
+      title: "Terms Required",
+      description: "Please agree to the Terms of Service and Privacy Policy",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const username = formData.username || formData.email.split('@')[0];
+    if (formData.password !== formData.passwordConfirm) {
       toast({
-        title: "Terms Required",
-        description: "Please agree to the Terms of Service and Privacy Policy",
-        variant: "destructive",
+        title: 'Password Mismatch',
+        description: 'Password and confirmation do not match.',
+        variant: 'destructive',
       });
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    try {
-      // Generate username from email if not provided
-      const username = formData.username || formData.email.split('@')[0];
-      // Ensure password confirmation matches
-      if (formData.password !== formData.passwordConfirm) {
-        toast({
-          title: 'Password Mismatch',
-          description: 'Password and confirmation do not match.',
-          variant: 'destructive',
-        });
-        setLoading(false);
-        return;
-      }
+    // Create new user and send verification email
+    await pb.create(
+      formData.email,
+      formData.password,
+      formData.passwordConfirm,
+      username,
+      formData.name
+    );
 
-      await pb.create(formData.email, formData.password, formData.passwordConfirm, username, formData.name);
+    // Show verification message (no auto-login)
+    toast({
+      title: "Verify Your Email",
+      description:
+        "A verification link has been sent to your email. Please verify your account before signing in.",
+    });
 
-      // Auto sign in after registration
-      await pb.authWithPassword(formData.email, formData.password);
+    resetForm();
+    onModeChange('signin'); // Switch to sign-in screen automatically
+  } catch (error: any) {
+    toast({
+      title: "Registration Failed",
+      description: error.message || "Please check your information and try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
-      toast({
-        title: "Welcome to SaaSFlow!",
-        description: "Your account has been created successfully.",
-      });
-
-      onClose();
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        setLocation('/pricing');
-      }
-    } catch (error: any) {
-      toast({
-        title: "Registration Failed",
-        description: error.message || "Please check your information and try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      await pb.authWithPassword(formData.email, formData.password);
+  try {
+    const authData = await pb.authWithPassword(formData.email, formData.password);
 
+    // Check if user is verified
+    const userRecord = authData.user;
+    if (!userRecord || (userRecord as any).verified === false) {
+      pb.logout();
       toast({
-        title: "Welcome back!",
-        description: "You have been signed in successfully.",
-      });
-
-      onClose();
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        setLocation('/dashboard');
-      }
-    } catch (error: any) {
-      toast({
-        title: "Sign In Failed",
-        description: "Invalid email or password. Please try again.",
+        title: "Email Not Verified",
+        description: "Please verify your email address before logging in.",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
+      return;
     }
-  };
+
+    toast({
+      title: "Welcome!",
+      description: "You have been signed in successfully.",
+    });
+
+    onClose();
+    if (onSuccess) onSuccess();
+    else setLocation('/dashboard');
+  } catch (error: any) {
+    const msg = error.message || "Invalid email or password. Please try again.";
+    toast({
+      // title: "Sign In Failed",
+      title: msg.includes("verify") ? "Email Not Verified" : "Sign In Failed",
+      // description: "Invalid email or password. Please try again.",
+      description: msg,
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+/********************************************************* */
+
+const handleForgotPassword = async () => {
+  if (!formData.email) {
+    toast({
+      title: "Email Required",
+      description: "Please enter your email address to reset your password.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  setLoading(true);
+  try {
+    await pb.requestPasswordReset(formData.email);
+    toast({
+      title: "Password Reset Email Sent",
+      description:
+        "If an account exists with that email, you will receive a password reset link shortly.",
+    });
+  } catch (error: any) {
+    toast({
+      title: "Reset Failed",
+      description: error.message || "Unable to send password reset email.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const resetForm = () => {
     setFormData({
@@ -194,9 +239,14 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
             )}
             {mode === 'signin' && (
               <div className="text-right">
-                <a href="#" className="text-sm text-primary hover:underline">
-                  Forgot password?
-                </a>
+              <button
+                type="button"
+                onClick={() => handleForgotPassword()}
+                className="text-sm text-primary hover:underline"
+              >
+                Forgot password?
+              </button>
+
               </div>
             )}
           </div>
