@@ -52,28 +52,28 @@ export class PocketBaseClient {
     };
   }
 
- /** Login with email & password */
-async authWithPassword(email: string, password: string): Promise<AuthData> {
-  try {
-    const record = await this.pb.collection('users').authWithPassword(email, password);
+  /** Login with email & password */
+  async authWithPassword(email: string, password: string): Promise<AuthData> {
+    try {
+      const record = await this.pb.collection('users').authWithPassword(email, password);
 
-    // Check verification status before proceeding
-    if (!record?.record?.verified) {
-      // Clear auth immediately so token doesn't persist
-      this.pb.authStore.clear();
-      throw new Error('Please verify your email before logging in.');
-    }
+      // Check verification status before proceeding
+      if (!record?.record?.verified) {
+        // Clear auth immediately so token doesn't persist
+        this.pb.authStore.clear();
+        throw new Error('Please verify your email before logging in.');
+      }
 
-    this.authData = this.mapAuthData(record);
-    localStorage.setItem('auth', JSON.stringify(this.authData));
-    return this.authData;
-  } catch (error: any) {
-    if (error.message === 'Please verify your email before logging in.') {
-      throw error;
+      this.authData = this.mapAuthData(record);
+      localStorage.setItem('auth', JSON.stringify(this.authData));
+      return this.authData;
+    } catch (error: any) {
+      if (error.message === 'Please verify your email before logging in.') {
+        throw error;
+      }
+      throw new Error('Authentication failed');
     }
-    throw new Error('Authentication failed');
   }
-}
 
 
   /** Create/register a new user */
@@ -121,13 +121,13 @@ async authWithPassword(email: string, password: string): Promise<AuthData> {
   }
 
   /** Request password reset email */
-async requestPasswordReset(email: string): Promise<void> {
-  try {
-    await this.pb.collection('users').requestPasswordReset(email);
-  } catch (error) {
-    throw new Error('Failed to send password reset email');
+  async requestPasswordReset(email: string): Promise<void> {
+    try {
+      await this.pb.collection('users').requestPasswordReset(email);
+    } catch (error) {
+      throw new Error('Failed to send password reset email');
+    }
   }
-}
 
   /** Logout */
   logout() {
