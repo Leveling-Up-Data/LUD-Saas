@@ -218,19 +218,20 @@ export default function Checkout() {
       try {
         setLoading(true);
         
-        const response = await apiRequest('POST', '/api/create-subscription', {
-          userId: pb.authStore.model?.id,
-          stripePriceId
+        // Call PocketBase custom route for subscription creation
+        const data = await pb.send('/api/create-subscription', {
+          method: 'POST',
+          body: {
+            userId: pb.authStore.model?.id,
+            stripePriceId
+          }
         });
-        
-        const data = await response.json();
         
         if (data.clientSecret) {
           setClientSecret(data.clientSecret);
           
           // Fetch product details for display
-          const productsResponse = await apiRequest('GET', '/api/products');
-          const products = await productsResponse.json();
+          const products = await pb.collection('products').getFullList();
           const product = products.find((p: any) => p.stripePriceId === stripePriceId);
           
           if (product) {

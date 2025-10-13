@@ -14,8 +14,48 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { data: authData } = useQuery({
-    queryKey: ['/api/user', pb.authStore.model?.id],
+    queryKey: ['user', pb.authStore.model?.id],
     enabled: pb.authStore.isValid,
+    queryFn: async () => {
+      if (!pb.authStore.model?.id) return null;
+      
+      // Get user data
+      const user = await pb.collection('users').getOne(pb.authStore.model.id);
+      
+      // Get subscription if exists
+      let subscription = null;
+      try {
+        const subscriptions = await pb.collection('subscriptions').getList(1, 1, {
+          filter: `userId = "${pb.authStore.model.id}"`,
+          sort: '-created'
+        });
+        if (subscriptions.items.length > 0) {
+          subscription = subscriptions.items[0];
+        }
+      } catch (error) {
+        // No subscription found, that's okay
+      }
+
+      return {
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          name: user.name,
+          stripeCustomerId: user.stripeCustomerId,
+          stripeSubscriptionId: user.stripeSubscriptionId,
+          created: user.created
+        },
+        subscription: subscription ? {
+          id: subscription.id,
+          plan: subscription.plan,
+          status: subscription.status,
+          currentPeriodEnd: subscription.currentPeriodEnd,
+          amount: subscription.amount,
+          trialEnd: subscription.trialEnd
+        } : undefined
+      };
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 

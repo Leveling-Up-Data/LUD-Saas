@@ -1,7 +1,6 @@
-// Note: Since we're using Express backend instead of actual PocketBase,
-// this file provides a similar API interface for consistency
-import { apiRequest } from "./queryClient";
+import PocketBase from 'pocketbase';
 
+// Export types for compatibility
 export interface AuthData {
   user: {
     id: string;
@@ -10,7 +9,7 @@ export interface AuthData {
     name: string;
     stripeCustomerId?: string;
     stripeSubscriptionId?: string;
-    createdAt: string;
+    created: string;
   };
   subscription?: {
     id: string;
@@ -22,33 +21,63 @@ export interface AuthData {
   };
 }
 
-export class PocketBaseClient {
-  private authData: AuthData | null = null;
-
-  constructor(private baseUrl: string = '') {}
-
-  get isValid() {
-    return this.authData !== null;
-  }
-
-  get authStore() {
-    return {
-      model: this.authData?.user || null,
-      isValid: this.isValid,
-      clear: () => {
-        this.authData = null;
-        localStorage.removeItem('auth');
+// Helper function to get user with subscription data
+async function getUserWithSubscription(pb: PocketBaseClient, userId: string): Promise<AuthData | null> {
+  try {
+    // Get user data
+    const user = await pb.collection('users').getOne(userId);
+    
+    // Get subscription if exists
+    let subscription = null;
+    try {
+      const subscriptions = await pb.collection('subscriptions').getList(1, 1, {
+        filter: `userId = "${userId}"`,
+        sort: '-created'
+      });
+      if (subscriptions.items.length > 0) {
+        subscription = subscriptions.items[0];
       }
-    };
-  }
+    } catch (error) {
+      // No subscription found, that's okay
+    }
 
+    return {
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        name: user.name,
+        stripeCustomerId: user.stripeCustomerId,
+        stripeSubscriptionId: user.stripeSubscriptionId,
+        created: user.created
+      },
+      subscription: subscription ? {
+        id: subscription.id,
+        plan: subscription.plan,
+        status: subscription.status,
+        currentPeriodEnd: subscription.currentPeriodEnd,
+        amount: subscription.amount,
+        trialEnd: subscription.trialEnd
+      } : undefined
+    };
+  } catch (error) {
+    console.error('Error fetching user with subscription:', error);
+    return null;
+  }
+}
+
+// Extend PocketBase with custom methods for compatibility
+export class PocketBaseClient extends PocketBase {
   async authWithPassword(email: string, password: string): Promise<AuthData> {
     try {
-      const response = await apiRequest('POST', '/api/login', { email, password });
-      const data = await response.json();
-      this.authData = data;
-      localStorage.setItem('auth', JSON.stringify(data));
-      return data;
+      const authData = await this.collection('users').authWithPassword(email, password);
+      const userWithSubscription = await getUserWithSubscription(this, authData.record.id);
+      
+      if (!userWithSubscription) {
+        throw new Error('Failed to fetch user data');
+      }
+      
+      return userWithSubscription;
     } catch (error) {
       throw new Error('Authentication failed');
     }
@@ -56,32 +85,38 @@ export class PocketBaseClient {
 
   async create(email: string, password: string, username: string, name: string): Promise<AuthData['user']> {
     try {
-      const response = await apiRequest('POST', '/api/register', {
+      const userData = await this.collection('users').create({
         email,
         password,
+        passwordConfirm: password,
         username,
         name
       });
-      return await response.json();
+      
+      return {
+        id: userData.id,
+        username: userData.username,
+        email: userData.email,
+        name: userData.name,
+        stripeCustomerId: userData.stripeCustomerId,
+        stripeSubscriptionId: userData.stripeSubscriptionId,
+        created: userData.created
+      };
     } catch (error) {
       throw new Error('Registration failed');
     }
   }
 
   async refresh(): Promise<AuthData | null> {
-    const stored = localStorage.getItem('auth');
-    if (!stored) return null;
-
     try {
-      const authData = JSON.parse(stored);
-      if (authData.user?.id) {
-        const response = await apiRequest('GET', `/api/user?userId=${authData.user.id}`);
-        const data = await response.json();
-        this.authData = data;
-        localStorage.setItem('auth', JSON.stringify(data));
-        return data;
+      // Try to refresh the auth token
+      if (this.authStore.isValid) {
+        await this.collection('users').authRefresh();
+        const userWithSubscription = await getUserWithSubscription(this, this.authStore.model?.id || '');
+        return userWithSubscription;
       }
     } catch (error) {
+      // Clear invalid auth
       this.authStore.clear();
     }
     return null;
@@ -90,11 +125,16 @@ export class PocketBaseClient {
   logout() {
     this.authStore.clear();
   }
+
+  get isValid() {
+    return this.authStore.isValid;
+  }
 }
 
-export const pb = new PocketBaseClient();
+// Create instance
+export const pb = new PocketBaseClient(import.meta.env.VITE_POCKETBASE_URL || 'https://pb.levelingupdata.com');
 
-// Initialize from localStorage
+// Initialize auth from stored token
 if (typeof window !== 'undefined') {
   pb.refresh();
 }

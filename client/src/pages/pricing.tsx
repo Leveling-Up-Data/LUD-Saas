@@ -17,7 +17,22 @@ export default function Pricing() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const { data: products, isLoading } = useQuery<Product[]>({
-    queryKey: ['/api/products'],
+    queryKey: ['products'],
+    queryFn: async () => {
+      const records = await pb.collection('products').getFullList({
+        sort: 'priority'
+      });
+      return records.map(record => ({
+        id: record.id,
+        name: record.name,
+        price: record.price,
+        stripePriceId: record.stripePriceId,
+        features: record.features || [],
+        maxUsers: record.maxUsers,
+        storage: record.storage,
+        priority: record.priority
+      }));
+    }
   });
 
   const isAuthenticated = pb.authStore.isValid;
