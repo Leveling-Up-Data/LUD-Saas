@@ -150,7 +150,7 @@ export function Chatbot() {
             id="chatbot-header"
             className="bg-gradient-to-r from-primary to-secondary text-white px-4 py-3 rounded-t-lg flex justify-between items-center"
           >
-            <span className="font-semibold">RAG Chatbot</span>
+            <span className="font-semibold">Have a question? Ask us!</span>
             <button
               id="chatbot-close"
               onClick={() => setIsOpen(false)}
