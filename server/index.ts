@@ -70,6 +70,11 @@ app.use((req, res, next) => {
   // Cloud Run requires the PORT environment variable to be used
   // Default to 8080 if not specified (Cloud Run standard)
   const port = parseInt(process.env.PORT || '8080', 10);
+  
+  // Ensure we're in production mode for Cloud Run
+  if (process.env.NODE_ENV !== 'production') {
+    process.env.NODE_ENV = 'production';
+  }
   server.listen({
     port,
     host: "0.0.0.0",

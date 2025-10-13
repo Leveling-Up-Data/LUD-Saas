@@ -45,7 +45,7 @@ gcloud services enable containerregistry.googleapis.com
 
 # Build and push the image
 echo -e "${YELLOW}🏗️  Building and pushing Docker image${NC}"
-docker build -t $IMAGE_NAME .
+docker build --platform linux/amd64 -t $IMAGE_NAME .
 docker push $IMAGE_NAME
 
 # Deploy to Cloud Run
