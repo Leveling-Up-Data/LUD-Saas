@@ -21,6 +21,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Build the application
+RUN npm run build
+
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 RUN chown -R appuser:appuser /app
