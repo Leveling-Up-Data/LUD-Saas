@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Navbar } from "@/components/navbar";
 import { Chatbot } from "@/components/chatbot";
 import Home from "@/pages/home";
+import Docs from "@/pages/docs";
 import Pricing from "@/pages/pricing";
 import Dashboard from "@/pages/dashboard";
 import Checkout from "@/pages/checkout";
@@ -16,6 +17,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/pricing" component={Pricing} />
+      <Route path="/docs" component={Docs} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/checkout" component={Checkout} />
       <Route component={NotFound} />
