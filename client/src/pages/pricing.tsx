@@ -105,7 +105,7 @@ export default function Pricing() {
           {/* Feature Comparison Table */}
           <div className="mt-20">
             <h3 className="text-3xl font-bold text-foreground text-center mb-12">Compare all features</h3>
-            
+
             <div className="bg-card border border-border rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[600px]" data-testid="table-feature-comparison">
@@ -191,7 +191,7 @@ export default function Pricing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h4 className="font-semibold text-foreground mb-4">Product</h4>
+              <h4 className="font-semibold text-foreground mb-4">Starfish</h4>
               <ul className="space-y-2">
                 <li><a href="#features" className="text-muted-foreground hover:text-foreground transition">Features</a></li>
                 <li><Link to="/pricing" className="text-muted-foreground hover:text-foreground transition">Pricing</Link></li>
@@ -203,7 +203,7 @@ export default function Pricing() {
               <h4 className="font-semibold text-foreground mb-4">Company</h4>
               <ul className="space-y-2">
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">About</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Blog</a></li>
+                <li><a href="https://levelingupdata.com/blog/" className="text-muted-foreground hover:text-foreground transition">Blog</a></li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Careers</a></li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Contact</a></li>
               </ul>
@@ -213,29 +213,27 @@ export default function Pricing() {
               <ul className="space-y-2">
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Documentation</a></li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Guides</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Support</a></li>
+                <li><Link to="/support" className="text-muted-foreground hover:text-foreground transition">Support</Link></li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Status</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-foreground mb-4">Legal</h4>
               <ul className="space-y-2">
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Privacy</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Terms</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Security</a></li>
+                <li><Link to="/privacy" className="text-muted-foreground hover:text-foreground transition">Privacy</Link></li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Cookies</a></li>
               </ul>
             </div>
           </div>
-          
+
           <div className="border-t border-border pt-8 text-center">
             <p className="text-muted-foreground text-sm">© Leveling Up Data - {new Date().getFullYear()} All Rights Reserved.</p>
           </div>
         </div>
       </footer>
 
-      <AuthModal 
-        open={authModal.open} 
+      <AuthModal
+        open={authModal.open}
         mode={authModal.mode}
         onClose={() => {
           setAuthModal({ open: false, mode: 'signup' });

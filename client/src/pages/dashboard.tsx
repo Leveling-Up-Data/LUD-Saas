@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,17 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { pb } from "@/lib/pocketbase";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Users, 
-  Database, 
-  Zap, 
-  TrendingUp, 
-  ArrowUp, 
-  Gift, 
-  UserPlus, 
-  CreditCard, 
-  Rocket, 
-  Shield, 
+import {
+  Users,
+  Database,
+  Zap,
+  TrendingUp,
+  ArrowUp,
+  Gift,
+  UserPlus,
+  CreditCard,
+  Rocket,
+  Shield,
   Bell,
   Settings,
   FileText,
@@ -35,10 +35,10 @@ export default function Dashboard() {
     enabled: pb.authStore.isValid,
     queryFn: async () => {
       if (!pb.authStore.model?.id) return null;
-      
+
       // Get user data
       const user = await pb.collection('users').getOne(pb.authStore.model.id);
-      
+
       // Get subscription if exists
       let subscription = null;
       try {
@@ -164,7 +164,7 @@ export default function Dashboard() {
   ];
 
   // Calculate trial days remaining
-  const trialDaysRemaining = subscription?.trialEnd 
+  const trialDaysRemaining = subscription?.trialEnd
     ? Math.max(0, Math.ceil((new Date(subscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
 
@@ -199,7 +199,7 @@ export default function Dashboard() {
 
       {/* Dashboard Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         {/* Subscription Status Card */}
         <Card className="mb-8 shadow-sm">
           <CardContent className="p-8">
@@ -211,7 +211,7 @@ export default function Dashboard() {
                     {subscription?.status === 'trialing' ? 'Free Trial' : subscription?.status || 'Active'}
                   </Badge>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Plan</p>
@@ -228,19 +228,19 @@ export default function Dashboard() {
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Next Billing Date</p>
                     <p className="text-lg font-semibold text-foreground" data-testid="text-next-billing">
-                      {subscription?.currentPeriodEnd 
-                        ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'short', 
-                            day: 'numeric' 
-                          })
+                      {subscription?.currentPeriodEnd
+                        ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })
                         : 'Not set'
                       }
                     </p>
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex flex-col space-y-3">
                 <Button variant="outline" className="flex items-center space-x-2" data-testid="button-upgrade-plan">
                   <ArrowUp className="h-4 w-4" />
@@ -335,7 +335,7 @@ export default function Dashboard() {
 
         {/* Recent Activity & Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Recent Activity */}
           <div className="lg:col-span-2">
             <Card className="shadow-sm">
@@ -372,9 +372,9 @@ export default function Dashboard() {
               <CardContent>
                 <div className="space-y-3">
                   {quickActions.map((action, index) => (
-                    <Button 
+                    <Button
                       key={index}
-                      variant="ghost" 
+                      variant="ghost"
                       className="w-full justify-between p-4 h-auto group hover:bg-muted"
                       data-testid={`button-${action.title.toLowerCase().replace(' ', '-')}`}
                     >
@@ -427,7 +427,7 @@ export default function Dashboard() {
                     <p className="text-sm text-muted-foreground">Expires 12/2025</p>
                   </div>
                 </div>
-                
+
                 <div className="flex space-x-3">
                   <Button variant="outline" data-testid="button-update-card">Update Card</Button>
                   <Button variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10" data-testid="button-remove-card">
@@ -445,7 +445,7 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h4 className="font-semibold text-foreground mb-4">Product</h4>
+              <h4 className="font-semibold text-foreground mb-4">Starfish</h4>
               <ul className="space-y-2">
                 <li><a href="#features" className="text-muted-foreground hover:text-foreground transition">Features</a></li>
                 <li><a href="/pricing" className="text-muted-foreground hover:text-foreground transition">Pricing</a></li>
@@ -457,7 +457,7 @@ export default function Dashboard() {
               <h4 className="font-semibold text-foreground mb-4">Company</h4>
               <ul className="space-y-2">
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">About</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Blog</a></li>
+                <li><a href="https://levelingupdata.com/blog/" className="text-muted-foreground hover:text-foreground transition">Blog</a></li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Careers</a></li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Contact</a></li>
               </ul>
@@ -467,21 +467,21 @@ export default function Dashboard() {
               <ul className="space-y-2">
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Documentation</a></li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Guides</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Support</a></li>
+                <li><Link to="/support" className="text-muted-foreground hover:text-foreground transition">Support</Link></li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Status</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-foreground mb-4">Legal</h4>
               <ul className="space-y-2">
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Privacy</a></li>
+                <li><Link to="/privacy" className="text-muted-foreground hover:text-foreground transition">Privacy</Link></li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Terms</a></li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Security</a></li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Cookies</a></li>
               </ul>
             </div>
           </div>
-          
+
           <div className="border-t border-border pt-8 text-center">
             <p className="text-muted-foreground text-sm">© Leveling Up Data - {new Date().getFullYear()} All Rights Reserved.</p>
           </div>

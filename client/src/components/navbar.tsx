@@ -18,10 +18,10 @@ export function Navbar() {
     enabled: pb.authStore.isValid,
     queryFn: async () => {
       if (!pb.authStore.model?.id) return null;
-      
+
       // Get user data
       const user = await pb.collection('users').getOne(pb.authStore.model.id);
-      
+
       // Get subscription if exists
       let subscription = null;
       try {
@@ -77,18 +77,18 @@ export function Navbar() {
               </div>
               <span className="text-xl font-bold text-foreground">Leveling Up Data</span>
             </Link>
-            
+
             <div className="hidden md:flex items-center space-x-8">
               <Link to="/pricing" className="text-muted-foreground hover:text-foreground transition">
                 Pricing
               </Link>
-              <a href="#features" className="text-muted-foreground hover:text-foreground transition">
-                Features
-              </a>
+              <Link to="/products" className="text-muted-foreground hover:text-foreground transition">
+                Products
+              </Link>
               <a href="#docs" className="text-muted-foreground hover:text-foreground transition">
                 Docs
               </a>
-              
+
               {isAuthenticated ? (
                 <div className="flex items-center space-x-4">
                   <Link to="/dashboard">
@@ -107,15 +107,15 @@ export function Navbar() {
                 </div>
               ) : (
                 <>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     onClick={() => setAuthModal({ open: true, mode: 'signin' })}
                     className="text-muted-foreground hover:text-foreground"
                     data-testid="button-signin"
                   >
                     Sign In
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => setAuthModal({ open: true, mode: 'signup' })}
                     className="bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90"
                     data-testid="button-signup"
@@ -125,8 +125,8 @@ export function Navbar() {
                 </>
               )}
             </div>
-            
-            <button 
+
+            <button
               className="md:hidden text-foreground"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               data-testid="button-mobile-menu"
@@ -135,7 +135,7 @@ export function Navbar() {
             </button>
           </div>
         </div>
-        
+
         {/* Mobile menu */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-card border-t border-border">
@@ -143,13 +143,13 @@ export function Navbar() {
               <Link to="/pricing" className="block py-2 text-muted-foreground hover:text-foreground transition">
                 Pricing
               </Link>
-              <a href="#features" className="block py-2 text-muted-foreground hover:text-foreground transition">
-                Features
-              </a>
+              <Link to="/products" className="block py-2 text-muted-foreground hover:text-foreground transition">
+                Products
+              </Link>
               <a href="#docs" className="block py-2 text-muted-foreground hover:text-foreground transition">
                 Docs
               </a>
-              
+
               {isAuthenticated ? (
                 <div className="pt-2 space-y-2">
                   <Link to="/dashboard" className="block py-2 text-muted-foreground hover:text-foreground transition">
@@ -161,13 +161,13 @@ export function Navbar() {
                 </div>
               ) : (
                 <div className="pt-2 space-y-2">
-                  <button 
+                  <button
                     onClick={() => setAuthModal({ open: true, mode: 'signin' })}
                     className="block w-full text-left py-2 text-muted-foreground hover:text-foreground transition"
                   >
                     Sign In
                   </button>
-                  <button 
+                  <button
                     onClick={() => setAuthModal({ open: true, mode: 'signup' })}
                     className="block w-full text-left py-2 text-primary font-medium"
                   >
@@ -180,8 +180,8 @@ export function Navbar() {
         )}
       </nav>
 
-      <AuthModal 
-        open={authModal.open} 
+      <AuthModal
+        open={authModal.open}
         mode={authModal.mode}
         onClose={() => setAuthModal({ open: false, mode: 'signup' })}
         onModeChange={(mode: 'signin' | 'signup') => setAuthModal({ open: true, mode })}
