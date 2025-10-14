@@ -407,9 +407,7 @@ export default function Checkout() {
             <div>
               <h4 className="font-semibold text-foreground mb-4">Legal</h4>
               <ul className="space-y-2">
-                <li><Link to="/privacy" className="text-muted-foreground hover:text-foreground transition">Privacy</Link></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Terms</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Security</a></li>
+                <li><a href="/privacy" className="text-muted-foreground hover:text-foreground transition">Privacy</a></li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Cookies</a></li>
               </ul>
             </div>
