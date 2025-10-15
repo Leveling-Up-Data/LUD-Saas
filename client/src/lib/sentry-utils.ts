@@ -60,13 +60,13 @@ export const capturePerformance = (name: string, duration: number, tags?: Record
 };
 
 /**
- * Start a custom transaction
+ * Start a custom span
  */
-export const startTransaction = (name: string, op: string = 'custom') => {
-  return Sentry.startTransaction({
+export const startSpan = (name: string, op: string = 'custom', callback: (span: any) => void) => {
+  return Sentry.startSpan({
     name,
     op,
-  });
+  }, callback);
 };
 
 /**

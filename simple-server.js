@@ -89,35 +89,33 @@ app.get('/api/test-sentry', (req, res) => {
 
 // Test endpoint for Sentry performance monitoring
 app.get('/api/test-performance', async (req, res) => {
-  const transaction = Sentry.startTransaction({
+  const span = Sentry.startSpan({
     name: 'Test Performance Endpoint',
     op: 'http.server',
+  }, async (span) => {
+    try {
+      // Simulate some work
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Add some breadcrumbs
+      Sentry.addBreadcrumb({
+        message: 'Processing performance test',
+        category: 'test',
+        level: 'info',
+      });
+      
+      span.setStatus({ code: 1, message: 'ok' });
+      res.json({ 
+        message: 'Performance test completed',
+        duration: '100ms',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      span.setStatus({ code: 2, message: 'internal_error' });
+      Sentry.captureException(error);
+      res.status(500).json({ message: 'Performance test failed', error: error.message });
+    }
   });
-  
-  try {
-    // Simulate some work
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Add some breadcrumbs
-    Sentry.addBreadcrumb({
-      message: 'Processing performance test',
-      category: 'test',
-      level: 'info',
-    });
-    
-    transaction.setStatus('ok');
-    res.json({ 
-      message: 'Performance test completed',
-      duration: '100ms',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    transaction.setStatus('internal_error');
-    Sentry.captureException(error);
-    res.status(500).json({ message: 'Performance test failed', error: error.message });
-  } finally {
-    transaction.finish();
-  }
 });
 
 // Test endpoint for Sentry profiling
