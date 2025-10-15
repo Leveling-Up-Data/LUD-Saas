@@ -4,14 +4,26 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import * as Sentry from '@sentry/node';
 
-// Initialize Sentry
+// Initialize Sentry with profiling
 Sentry.init({
   dsn: process.env.SENTRY_DSN || "https://a6c9e23b8ebe380495ffb8991a6541e6@log.levelingupdata.com/3",
   environment: process.env.NODE_ENV || "development",
-  tracesSampleRate: 1.0,
+  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+  profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
   integrations: [
     Sentry.expressIntegration(),
+    Sentry.httpIntegration(),
+    Sentry.nativeNodeFetchIntegration(),
   ],
+  beforeSend(event) {
+    // Filter out sensitive data
+    if (event.request?.data) {
+      delete event.request.data.password;
+      delete event.request.data.token;
+      delete event.request.data.secret;
+    }
+    return event;
+  },
 });
 
 const __filename = fileURLToPath(import.meta.url);
@@ -73,6 +85,70 @@ app.get('/api/test-sentry', (req, res) => {
     Sentry.captureException(error);
     res.status(500).json({ message: 'Test error sent to Sentry', error: error.message });
   }
+});
+
+// Test endpoint for Sentry performance monitoring
+app.get('/api/test-performance', async (req, res) => {
+  const transaction = Sentry.startTransaction({
+    name: 'Test Performance Endpoint',
+    op: 'http.server',
+  });
+  
+  try {
+    // Simulate some work
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Add some breadcrumbs
+    Sentry.addBreadcrumb({
+      message: 'Processing performance test',
+      category: 'test',
+      level: 'info',
+    });
+    
+    transaction.setStatus('ok');
+    res.json({ 
+      message: 'Performance test completed',
+      duration: '100ms',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    transaction.setStatus('internal_error');
+    Sentry.captureException(error);
+    res.status(500).json({ message: 'Performance test failed', error: error.message });
+  } finally {
+    transaction.finish();
+  }
+});
+
+// Test endpoint for Sentry profiling
+app.get('/api/test-profiling', (req, res) => {
+  const startTime = Date.now();
+  
+  // Simulate CPU-intensive work for profiling
+  let result = 0;
+  for (let i = 0; i < 1000000; i++) {
+    result += Math.sqrt(i);
+  }
+  
+  const duration = Date.now() - startTime;
+  
+  Sentry.addBreadcrumb({
+    message: 'Profiling test completed',
+    category: 'profiling',
+    level: 'info',
+    data: {
+      duration: `${duration}ms`,
+      iterations: 1000000,
+      result: result.toFixed(2)
+    }
+  });
+  
+  res.json({
+    message: 'Profiling test completed',
+    duration: `${duration}ms`,
+    iterations: 1000000,
+    result: result.toFixed(2)
+  });
 });
 
 // Serve static files from the built frontend
