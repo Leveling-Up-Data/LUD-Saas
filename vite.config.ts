@@ -8,15 +8,15 @@ export default defineConfig({
   plugins: [
     react(),
     runtimeErrorOverlay(),
-    // Sentry plugin for source maps and release tracking
-    sentryVitePlugin({
-      org: "levelingupdata",
-      project: "lud-saas",
-      authToken: process.env.SENTRY_AUTH_TOKEN,
-      sourcemaps: {
-        assets: "./dist/**",
-      },
-    }),
+    // Sentry plugin for source maps and release tracking (disabled until project is created)
+    // sentryVitePlugin({
+    //   org: "sentry",
+    //   project: "lud-saas",
+    //   authToken: process.env.SENTRY_AUTH_TOKEN,
+    //   sourcemaps: {
+    //     assets: "./dist/**",
+    //   },
+    // }),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
