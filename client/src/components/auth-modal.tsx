@@ -3,35 +3,48 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { pb } from "@/lib/pocketbase";
 import { useToast } from "@/hooks/use-toast";
 import { Github, Chrome, Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 interface AuthModalProps {
   open: boolean;
-  mode: 'signin' | 'signup';
+  mode: "signin" | "signup";
   onClose: () => void;
-  onModeChange: (mode: 'signin' | 'signup') => void;
+  onModeChange: (mode: "signin" | "signup") => void;
   onSuccess?: () => void;
 }
 
-export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: AuthModalProps) {
+export function AuthModal({
+  open,
+  mode,
+  onClose,
+  onModeChange,
+  onSuccess,
+}: AuthModalProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const { signIn, signUp } = useAuth();
   const [formData, setFormData] = useState({
-    name: '',
-    username: '',
-    email: '',
-    password: '',
-    terms: false
+    name: "",
+    username: "",
+    email: "",
+    password: "",
+    terms: false,
   });
 
   const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -47,29 +60,25 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
 
     setLoading(true);
     try {
-      // Generate username from email if not provided
-      const username = formData.username || formData.email.split('@')[0];
-      
-      await pb.create(formData.email, formData.password, username, formData.name);
-      
-      // Auto sign in after registration
-      await pb.authWithPassword(formData.email, formData.password);
-      
+      const username = formData.username || formData.email.split("@")[0];
+      await signUp(formData.name, formData.email, formData.password, username);
+
       toast({
         title: "Welcome to SaaSFlow!",
         description: "Your account has been created successfully.",
       });
-      
+
       onClose();
       if (onSuccess) {
         onSuccess();
       } else {
-        setLocation('/pricing');
+        setLocation("/pricing");
       }
     } catch (error: any) {
       toast({
         title: "Registration Failed",
-        description: error.message || "Please check your information and try again.",
+        description:
+          error.message || "Please check your information and try again.",
         variant: "destructive",
       });
     } finally {
@@ -80,20 +89,20 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
-      await pb.authWithPassword(formData.email, formData.password);
-      
+      await signIn(formData.email, formData.password);
+
       toast({
         title: "Welcome back!",
         description: "You have been signed in successfully.",
       });
-      
+
       onClose();
       if (onSuccess) {
         onSuccess();
       } else {
-        setLocation('/dashboard');
+        setLocation("/dashboard");
       }
     } catch (error: any) {
       toast({
@@ -108,16 +117,16 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
 
   const resetForm = () => {
     setFormData({
-      name: '',
-      username: '',
-      email: '',
-      password: '',
-      terms: false
+      name: "",
+      username: "",
+      email: "",
+      password: "",
+      terms: false,
     });
   };
 
   const handleModeToggle = () => {
-    const newMode = mode === 'signup' ? 'signin' : 'signup';
+    const newMode = mode === "signup" ? "signin" : "signup";
     onModeChange(newMode);
     resetForm();
   };
@@ -132,12 +141,15 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center">
-            {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+            {mode === "signup" ? "Create your account" : "Welcome back"}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={mode === 'signup' ? handleSignUp : handleSignIn} className="space-y-4">
-          {mode === 'signup' && (
+        <form
+          onSubmit={mode === "signup" ? handleSignUp : handleSignIn}
+          className="space-y-4"
+        >
+          {mode === "signup" && (
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input
@@ -145,7 +157,7 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
                 type="text"
                 placeholder="John Doe"
                 value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
+                onChange={(e) => handleInputChange("name", e.target.value)}
                 required
                 data-testid="input-name"
               />
@@ -159,7 +171,7 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
               type="email"
               placeholder="john@example.com"
               value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
+              onChange={(e) => handleInputChange("email", e.target.value)}
               required
               data-testid="input-email"
             />
@@ -172,15 +184,17 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
               type="password"
               placeholder="••••••••"
               value={formData.password}
-              onChange={(e) => handleInputChange('password', e.target.value)}
+              onChange={(e) => handleInputChange("password", e.target.value)}
               required
               minLength={8}
               data-testid="input-password"
             />
-            {mode === 'signup' && (
-              <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
+            {mode === "signup" && (
+              <p className="text-xs text-muted-foreground">
+                Must be at least 8 characters
+              </p>
             )}
-            {mode === 'signin' && (
+            {mode === "signin" && (
               <div className="text-right">
                 <a href="#" className="text-sm text-primary hover:underline">
                   Forgot password?
@@ -189,20 +203,25 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
             )}
           </div>
 
-          {mode === 'signup' && (
+          {mode === "signup" && (
             <div className="flex items-start space-x-2">
               <Checkbox
                 id="terms"
                 checked={formData.terms}
-                onCheckedChange={(checked) => handleInputChange('terms', !!checked)}
+                onCheckedChange={(checked) =>
+                  handleInputChange("terms", !!checked)
+                }
                 data-testid="checkbox-terms"
               />
-              <label htmlFor="terms" className="text-sm text-muted-foreground leading-5">
-                I agree to the{' '}
+              <label
+                htmlFor="terms"
+                className="text-sm text-muted-foreground leading-5"
+              >
+                I agree to the{" "}
                 <a href="#" className="text-primary hover:underline">
                   Terms of Service
-                </a>{' '}
-                and{' '}
+                </a>{" "}
+                and{" "}
                 <a href="#" className="text-primary hover:underline">
                   Privacy Policy
                 </a>
@@ -210,14 +229,14 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
             </div>
           )}
 
-          <Button 
-            type="submit" 
-            className="w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90" 
+          <Button
+            type="submit"
+            className="w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90"
             disabled={loading}
             data-testid={`button-${mode}`}
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {mode === 'signup' ? 'Create Account' : 'Sign In'}
+            {mode === "signup" ? "Create Account" : "Sign In"}
           </Button>
 
           <div className="relative my-6">
@@ -225,7 +244,9 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
               <Separator />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+              </span>
             </div>
           </div>
 
@@ -243,14 +264,16 @@ export function AuthModal({ open, mode, onClose, onModeChange, onSuccess }: Auth
 
         <div className="mt-6 text-center">
           <p className="text-sm text-muted-foreground">
-            {mode === 'signup' ? 'Already have an account?' : "Don't have an account?"}
+            {mode === "signup"
+              ? "Already have an account?"
+              : "Don't have an account?"}
             <button
               type="button"
               onClick={handleModeToggle}
               className="ml-1 text-primary hover:underline font-medium"
               data-testid="button-toggle-mode"
             >
-              {mode === 'signup' ? 'Sign in' : 'Sign up'}
+              {mode === "signup" ? "Sign in" : "Sign up"}
             </button>
           </p>
         </div>
