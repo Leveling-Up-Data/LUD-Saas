@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, ArrowRight, Play, CheckCircle2, Users, Database, Zap, TrendingUp } from "lucide-react";
 import { AuthModal } from "@/components/auth-modal";
 import { ApiTokenDialog } from "@/components/api-token-dialog";
+import { Footer } from "@/components/footer";
 import { pb } from "@/lib/pocketbase";
 import { getApiTokenById } from "@/config/api-tokens";
 
@@ -30,11 +31,11 @@ export default function Home() {
 
   const handleApiClick = () => {
     console.log('API click handler called'); // Debug log
-    
+
     // Get the main API token from configuration
     const apiToken = getApiTokenById('main-api-token');
     console.log('API token found:', apiToken); // Debug log
-    
+
     if (apiToken) {
       setApiDialog({
         open: true,
@@ -49,7 +50,7 @@ export default function Home() {
         tokenName: 'Demo API Token'
       });
     }
-    
+
     console.log('Dialog state set:', { open: true, token: apiToken?.token || 'fallback', tokenName: apiToken?.name || 'Demo API Token' }); // Debug log
   };
 
@@ -101,15 +102,6 @@ export default function Home() {
               >
                 View Demo
                 <Play className="ml-2 h-5 w-5" />
-              </Button>
-              <Button 
-                onClick={handleApiClick}
-                variant="secondary"
-                size="lg"
-                className="px-8 py-4 text-lg w-full sm:w-auto"
-                data-testid="button-test-api"
-              >
-                Test API Dialog
               </Button>
             </div>
 
@@ -205,58 +197,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-card border-t border-border py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Starfish</h4>
-              <ul className="space-y-2">
-                <li><a href="#features" className="text-muted-foreground hover:text-foreground transition">Features</a></li>
-                <li><Link to="/pricing" className="text-muted-foreground hover:text-foreground transition">Pricing</Link></li>
-                <li>
-                  <button 
-                    onClick={handleApiClick} 
-                    className="text-muted-foreground hover:text-primary transition cursor-pointer bg-transparent border-none p-0 text-left w-full hover:bg-primary/10 rounded px-1 py-0.5"
-                  >
-                    API
-                  </button>
-                </li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Changelog</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Company</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">About</a></li>
-                <li><a href="https://levelingupdata.com/blog/" className="text-muted-foreground hover:text-foreground transition">Blog</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Careers</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Resources</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Documentation</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Guides</a></li>
-                <li><Link to="/support" className="text-muted-foreground hover:text-foreground transition">Support</Link></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Status</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Legal</h4>
-              <ul className="space-y-2">
-                <li><Link to="/privacy" className="text-muted-foreground hover:text-foreground transition">Privacy</Link></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Cookies</a></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-border pt-8 text-center">
-            <p className="text-muted-foreground text-sm">© Leveling Up Data - {new Date().getFullYear()} All Rights Reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
       <AuthModal
         open={authModal.open}

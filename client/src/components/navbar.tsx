@@ -60,13 +60,13 @@ export function Navbar() {
         },
         subscription: subscription
           ? {
-              id: subscription.id,
-              plan: subscription.plan,
-              status: subscription.status,
-              currentPeriodEnd: subscription.currentPeriodEnd,
-              amount: subscription.amount,
-              trialEnd: subscription.trialEnd,
-            }
+            id: subscription.id,
+            plan: subscription.plan,
+            status: subscription.status,
+            currentPeriodEnd: subscription.currentPeriodEnd,
+            amount: subscription.amount,
+            trialEnd: subscription.trialEnd,
+          }
           : undefined,
       };
     },
@@ -83,7 +83,7 @@ export function Navbar() {
   const handleApiClick = () => {
     // Get the main API token from configuration
     const apiToken = getApiTokenById('main-api-token');
-    
+
     if (apiToken) {
       setApiDialog({
         open: true,
@@ -123,7 +123,7 @@ export function Navbar() {
               </Link>
               <Link to="/docs" className="text-muted-foreground hover:text-foreground transition">
                 Docs
-              </Link>              
+              </Link>
               <Link to="/products" className="text-muted-foreground hover:text-foreground transition">
                 Products
               </Link>
@@ -197,16 +197,18 @@ export function Navbar() {
               <Link to="/docs" className="block py-2 text-muted-foreground hover:text-foreground transition">
                 Docs
               </Link>
-              <button 
+              <Link to="/products" className="block py-2 text-muted-foreground hover:text-foreground transition">
+                Products
+              </Link>
+              <Link to="/support" className="block py-2 text-muted-foreground hover:text-foreground transition">
+                Support
+              </Link>
+              <button
                 onClick={handleApiClick}
                 className="block w-full text-left py-2 text-muted-foreground hover:text-foreground transition"
               >
                 API
               </button>
-              
-              <Link to="/products" className="block py-2 text-muted-foreground hover:text-foreground transition">
-                Products
-              </Link>
 
               {isAuthenticated ? (
                 <div className="pt-2 space-y-2">
