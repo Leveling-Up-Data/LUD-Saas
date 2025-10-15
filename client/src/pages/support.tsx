@@ -17,18 +17,38 @@ import {
     Slack,
     MessageCircle
 } from "lucide-react";
+import { AuthModal } from "@/components/auth-modal";
+import { pb } from "@/lib/pocketbase";
 
 export default function Support() {
     const [activeSection, setActiveSection] = useState<string | null>(null);
+    const [showAuthModal, setShowAuthModal] = useState(false);
+    const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
     const toggleSection = (section: string) => {
         setActiveSection(activeSection === section ? null : section);
     };
 
     const handleProductSelect = (product: string) => {
-        if (product === "starfish-slack") {
-            window.location.href = "https://slack.com/oauth/v2/authorize?client_id=8395289183441.9315965017559&scope=app_mentions:read,channels:join,channels:read,chat:write,commands,files:read,files:write,groups:read,im:history,remote_files:read,mpim:history,channels:history,groups:history&user_scope=";
+        const doRedirect = () => {
+            if (product === "starfish-slack") {
+                window.location.href = "https://slack.com/oauth/v2/authorize?client_id=8395289183441.9315965017559&scope=app_mentions:read,channels:join,channels:read,chat:write,commands,files:read,files:write,groups:read,im:history,remote_files:read,mpim:history,channels:history,groups:history&user_scope=";
+            }
+        };
+
+        // If user is already authenticated with PocketBase, perform redirect
+        try {
+            if (pb?.authStore?.isValid) {
+                doRedirect();
+                return;
+            }
+        } catch (e) {
+            // fall through to show modal
         }
+
+        // Not authenticated: open auth modal and store pending action
+        setPendingAction(() => doRedirect);
+        setShowAuthModal(true);
     };
 
     return (
@@ -343,6 +363,23 @@ export default function Support() {
                     </div>
                 </div>
             </footer>
+            {/* Auth modal triggered when user clicks Add to Slack */}
+            <AuthModal
+                open={showAuthModal}
+                onOpenChange={(open) => {
+                    setShowAuthModal(open);
+                    if (!open) setPendingAction(null);
+                }}
+                onAuthSuccess={() => {
+                    // Close modal then run pending action if any
+                    setShowAuthModal(false);
+                    if (pendingAction) {
+                        // small timeout to ensure auth store updated
+                        setTimeout(() => pendingAction(), 200);
+                        setPendingAction(null);
+                    }
+                }}
+            />
         </div>
     );
 }

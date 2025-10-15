@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Star, ArrowRight, Wrench, Hammer, Cpu, Slack } from "lucide-react";
+import { AuthModal } from "@/components/auth-modal";
+import { pb } from "@/lib/pocketbase";
 
 interface Product {
     id: string;
@@ -21,7 +23,7 @@ const products: Product[] = [
         id: "starfish-slack",
         name: "Starfish Slack",
         description: "A Slack-based AI assistant that answers questions from uploaded documents directly inside Slack.",
-        icon: <Slack className="w-4 h-4" />,
+        icon: <Slack className="w-8 h-8" />,
         features: [
             "Real-time data processing",
             "Advanced tool commands",
@@ -52,14 +54,30 @@ const products: Product[] = [
 
 export default function Products() {
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [authModal, setAuthModal] = useState<{ open: boolean; mode: 'signin' | 'signup' }>({ open: false, mode: 'signin' });
+    const [pendingProduct, setPendingProduct] = useState<Product | null>(null);
+    const [, setLocation] = useLocation();
 
-    const handleProductSelect = (product: Product) => {
+    const proceedToProduct = (product: Product) => {
         setSelectedProduct(product);
         if (product.id === "starfish-slack") {
             window.location.href = "https://slack.com/oauth/v2/authorize?client_id=8395289183441.9315965017559&scope=app_mentions:read,channels:join,channels:read,chat:write,commands,files:read,files:write,groups:read,im:history,remote_files:read,mpim:history,channels:history,groups:history&user_scope=";
         } else {
-            window.location.href = '/pricing';
+            // navigate to pricing within SPA
+            setLocation('/pricing');
         }
+    };
+
+    const handleProductSelect = (product: Product) => {
+        // If user is authenticated proceed, otherwise prompt to sign in
+        if (pb.authStore.isValid) {
+            proceedToProduct(product);
+            return;
+        }
+
+        // Not authenticated: store pending and open signin modal
+        setPendingProduct(product);
+        setAuthModal({ open: true, mode: 'signin' });
     };
 
     return (
@@ -76,6 +94,21 @@ export default function Products() {
                     </p>
                 </div>
             </section>
+
+            {/* Auth Modal for required login */}
+            <AuthModal
+                open={authModal.open}
+                mode={authModal.mode}
+                onClose={() => setAuthModal({ open: false, mode: 'signin' })}
+                onModeChange={(mode) => setAuthModal({ open: true, mode })}
+                onSuccess={() => {
+                    setAuthModal({ open: false, mode: 'signin' });
+                    if (pendingProduct) {
+                        proceedToProduct(pendingProduct);
+                        setPendingProduct(null);
+                    }
+                }}
+            />
 
             {/* Products Section */}
             <section className="py-16 px-4 sm:px-6 lg:px-8">
