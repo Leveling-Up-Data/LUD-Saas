@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { pb } from '@/lib/pocketbase';
+import { useToast } from '@/hooks/use-toast';
 
-const BACKEND_URL = "https://n8n.levelingupdata.com/webhook-test/OpenWebUITestAgent";
+const BACKEND_URL = "https://n8n.levelingupdata.com/webhook/starfish";
 
 interface Message {
   text: string;
@@ -14,9 +16,13 @@ export function Chatbot() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastBlobUrlRef = useRef<string | null>(null);
+  const { toast } = useToast();
+
+  const isAuthenticated = pb.authStore.isValid && pb.authStore.model;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -40,26 +46,48 @@ export function Chatbot() {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in or sign up to use the file upload feature.",
+        variant: "destructive",
+      });
+      e.target.value = ''; // Clear the file input
+      return;
+    }
+
     const file = e.target.files?.[0] || null;
     setSelectedFile(file);
   };
 
   const sendMessage = async () => {
+    if (isLoading) return;
     const text = inputText.trim();
     const file = selectedFile;
-    
+
     if (!text && !file) return;
+
+    // Check if user is trying to send a file without being authenticated
+    if (file && !isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in or sign up to use the file upload feature.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     let userMsg = text || "[file attached]";
     if (file && !text) userMsg = `Sent a file: ${file.name}`;
     if (file && text) userMsg = `${text} (with file: ${file.name})`;
-    
+
     appendMessage(userMsg, 'user');
     setInputText('');
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
 
     try {
+      setIsLoading(true);
       let res;
       if (file) {
         const form = new FormData();
@@ -72,10 +100,10 @@ export function Chatbot() {
         res = await fetch(BACKEND_URL, { method: 'POST', body: form });
       } else {
         const payload = { event: 'text', query: text };
-        res = await fetch(BACKEND_URL, { 
-          method: "POST", 
-          headers: { "Content-Type": "application/json" }, 
-          body: JSON.stringify(payload) 
+        res = await fetch(BACKEND_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
         });
       }
 
@@ -95,7 +123,7 @@ export function Chatbot() {
       } else {
         reply = data;
       }
-      
+
       appendMessage(reply, 'bot');
 
       // File download link if present
@@ -108,19 +136,18 @@ export function Chatbot() {
           fileUrl = URL.createObjectURL(file);
           lastBlobUrlRef.current = fileUrl;
         }
-        if (fileUrl) {
-          appendMessage('Download file', 'bot', fileUrl);
-        }
       } catch (e) {
         // Silent fail
       }
     } catch (err) {
       appendMessage('⚠️ Backend error', 'bot');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !isLoading) {
       sendMessage();
     }
   };
@@ -185,40 +212,55 @@ export function Chatbot() {
                   </div>
                 ) : (
                   <div
-                    className={`px-4 py-2 rounded-lg max-w-[80%] ${
-                      msg.sender === 'user'
-                        ? 'bg-gradient-to-r from-primary to-secondary text-white'
-                        : 'bg-muted text-foreground'
-                    }`}
+                    className={`px-4 py-2 rounded-lg max-w-[80%] ${msg.sender === 'user'
+                      ? 'bg-gradient-to-r from-primary to-secondary text-white'
+                      : 'bg-muted text-foreground'
+                      }`}
                   >
                     {msg.text}
                   </div>
                 )}
               </div>
             ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-muted text-foreground px-3 py-2 rounded-lg inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Thinking…</span>
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
           {/* File Row */}
           <div id="chatbot-file-row" className="px-4 py-2 border-t border-border bg-card">
-            <input
-              type="file"
-              id="chatbot-file"
-              ref={fileInputRef}
-              accept=".pdf,.doc,.docx,.txt"
-              onChange={handleFileChange}
-              className="text-sm text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary/90 cursor-pointer"
-              data-testid="input-chatbot-file"
-            />
-            {selectedFile && (
-              <div
-                id="chatbot-filename"
-                className="text-xs text-muted-foreground mt-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]"
-                data-testid="text-filename"
-              >
-                {selectedFile.name}
-              </div>
-            )}
+            <div className="flex flex-col gap-1">
+              <input
+                type="file"
+                id="chatbot-file"
+                ref={fileInputRef}
+                accept=".pdf,.doc,.docx,.txt"
+                onChange={handleFileChange}
+                disabled={isLoading || !isAuthenticated}
+                className={`text-sm text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary/90 cursor-pointer ${isLoading || !isAuthenticated ? 'opacity-60 cursor-not-allowed' : ''}`}
+                data-testid="input-chatbot-file"
+              />
+              {!isAuthenticated && (
+                <div className="text-xs text-muted-foreground">
+                  Sign in to upload files
+                </div>
+              )}
+              {selectedFile && (
+                <div
+                  id="chatbot-filename"
+                  className="text-xs text-muted-foreground mt-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]"
+                  data-testid="text-filename"
+                >
+                  {selectedFile.name}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Input */}
@@ -230,16 +272,18 @@ export function Chatbot() {
               onChange={(e) => setInputText(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Type a message..."
-              className="flex-1 px-3 py-2 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
+              disabled={isLoading}
+              className={`flex-1 px-3 py-2 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${isLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
               data-testid="input-chatbot-text"
             />
             <button
               id="chatbot-send"
               onClick={sendMessage}
-              className="bg-gradient-to-r from-primary to-secondary text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
+              disabled={isLoading}
+              className={`bg-gradient-to-r from-primary to-secondary text-white px-4 py-2 rounded-lg transition ${isLoading ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'}`}
               data-testid="button-chatbot-send"
             >
-              <Send size={18} />
+              {isLoading ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <Send size={18} />}
             </button>
           </div>
         </div>

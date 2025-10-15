@@ -3,12 +3,21 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sparkles, ArrowRight, Play, CheckCircle2, Users, Database, Zap, TrendingUp } from "lucide-react";
 import { AuthModal } from "@/components/auth-modal";
+import { ApiTokenDialog } from "@/components/api-token-dialog";
+import { Footer } from "@/components/footer";
+import { pb } from "@/lib/pocketbase";
+import { getApiTokenById } from "@/config/api-tokens";
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const [authModal, setAuthModal] = useState<{ open: boolean; mode: 'signin' | 'signup' }>({
     open: false,
     mode: 'signup'
+  });
+  const [apiDialog, setApiDialog] = useState<{ open: boolean; token: string; tokenName: string }>({
+    open: false,
+    token: '',
+    tokenName: ''
   });
 
   const handleGetStarted = () => {
@@ -18,6 +27,31 @@ export default function Home() {
   const handleViewDemo = () => {
     // For demo purposes, redirect to pricing
     setLocation('/pricing');
+  };
+
+  const handleApiClick = () => {
+    console.log('API click handler called'); // Debug log
+
+    // Get the main API token from configuration
+    const apiToken = getApiTokenById('main-api-token');
+    console.log('API token found:', apiToken); // Debug log
+
+    if (apiToken) {
+      setApiDialog({
+        open: true,
+        token: apiToken.token,
+        tokenName: apiToken.name
+      });
+    } else {
+      // Fallback if no token is configured
+      setApiDialog({
+        open: true,
+        token: 'sk-demo-token-1234567890abcdef',
+        tokenName: 'Demo API Token'
+      });
+    }
+
+    console.log('Dialog state set:', { open: true, token: apiToken?.token || 'fallback', tokenName: apiToken?.name || 'Demo API Token' }); // Debug log
   };
 
   return (
@@ -30,19 +64,28 @@ export default function Home() {
               <Sparkles size={16} />
               <span className="text-sm font-medium">Powered by PocketBase & Stripe</span>
             </div>
-            
+
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground mb-6 leading-tight">
               Build your SaaS product
               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"> faster than ever</span>
             </h1>
-            
+
             <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
               Complete authentication, subscription management, and payment processing in one powerful platform. Start building in minutes, not weeks.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button 
-                onClick={handleGetStarted}
+              <Button
+                onClick={() => {
+                  // Check if user is logged in using PocketBase auth state
+                  if (pb.authStore.isValid && pb.authStore.model) {
+                    // Already logged in, redirect to products page
+                    setLocation('/products');
+                  } else {
+                    // Not logged in, show signup modal
+                    handleGetStarted();
+                  }
+                }}
                 size="lg"
                 className="bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90 shadow-lg px-8 py-4 text-lg w-full sm:w-auto"
                 data-testid="button-hero-signup"
@@ -50,7 +93,7 @@ export default function Home() {
                 Start Free Trial
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button 
+              <Button
                 onClick={handleViewDemo}
                 variant="outline"
                 size="lg"
@@ -61,7 +104,7 @@ export default function Home() {
                 <Play className="ml-2 h-5 w-5" />
               </Button>
             </div>
-            
+
             <div className="mt-12 flex flex-wrap justify-center items-center gap-8 text-muted-foreground">
               <div className="flex items-center space-x-2">
                 <CheckCircle2 className="h-5 w-5 text-primary" />
@@ -78,13 +121,20 @@ export default function Home() {
             </div>
           </div>
         </div>
-        
+
         {/* Decorative elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
           <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl" />
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/20 rounded-full blur-3xl" />
         </div>
       </section>
+
+      {/* Debug Info - Remove this later */}
+      {apiDialog.open && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white p-2 rounded z-50">
+          Dialog should be open! Token: {apiDialog.token}
+        </div>
+      )}
 
       {/* Features Preview */}
       <section id="features" className="py-20 sm:py-32 bg-background">
@@ -134,7 +184,7 @@ export default function Home() {
 
           <div className="text-center mt-12">
             <Link to="/pricing">
-              <Button 
+              <Button
                 size="lg"
                 className="bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90"
                 data-testid="button-see-pricing"
@@ -147,59 +197,21 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-card border-t border-border py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Product</h4>
-              <ul className="space-y-2">
-                <li><a href="#features" className="text-muted-foreground hover:text-foreground transition">Features</a></li>
-                <li><Link to="/pricing" className="text-muted-foreground hover:text-foreground transition">Pricing</Link></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">API</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Changelog</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Company</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">About</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Blog</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Careers</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Resources</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Documentation</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Guides</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Support</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Status</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Legal</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Privacy</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Terms</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Security</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Cookies</a></li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="border-t border-border pt-8 text-center">
-            <p className="text-muted-foreground text-sm">© Leveling Up Data - {new Date().getFullYear()} All Rights Reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
-      <AuthModal 
-        open={authModal.open} 
+      <AuthModal
+        open={authModal.open}
         mode={authModal.mode}
         onClose={() => setAuthModal({ open: false, mode: 'signup' })}
         onModeChange={(mode) => setAuthModal({ open: true, mode })}
+      />
+
+      {/* API Token Dialog */}
+      <ApiTokenDialog
+        open={apiDialog.open}
+        onOpenChange={(open) => setApiDialog({ ...apiDialog, open })}
+        token={apiDialog.token}
+        tokenName={apiDialog.tokenName}
       />
     </>
   );

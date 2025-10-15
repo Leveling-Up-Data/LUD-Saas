@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import App from "./App";
 import "./index.css";
+import { AuthProvider } from "@/lib/auth-context";
 
 // Initialize Sentry
 Sentry.init({
@@ -21,4 +22,8 @@ Sentry.init({
   replaysOnErrorSampleRate: 1.0,
 });
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <AuthProvider>
+    <App />
+  </AuthProvider>
+);
