@@ -15,8 +15,8 @@ RUN apt-get update && apt-get install -y \
 # Copy package files
 COPY package*.json ./
 
-# Install all dependencies
-RUN npm ci
+# Install all dependencies (use install to allow lockfile updates for optional deps)
+RUN npm install
 
 # Copy source code
 COPY . .
