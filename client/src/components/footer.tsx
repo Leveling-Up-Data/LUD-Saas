@@ -20,7 +20,6 @@ export function Footer() {
                                     API
                                 </a>
                             </li>
-                            <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Changelog</a></li>
                         </ul>
                     </div>
                     <div>
@@ -28,25 +27,23 @@ export function Footer() {
                         <ul className="space-y-2">
                             <li><a href="#" className="text-muted-foreground hover:text-foreground transition">About</a></li>
                             <li><a href="https://levelingupdata.com/blog/" className="text-muted-foreground hover:text-foreground transition">Blog</a></li>
-                            <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Careers</a></li>
-                            <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Contact</a></li>
+                            <li><Link to="/contact" className="text-muted-foreground hover:text-foreground transition">Contact</Link></li>
                         </ul>
                     </div>
                     <div>
                         <h4 className="font-semibold text-foreground mb-4">Resources</h4>
                         <ul className="space-y-2">
                             <li><Link to="/docs" className="text-muted-foreground hover:text-foreground transition">Documentation</Link></li>
-                            <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Guides</a></li>
+                            
                             <li><Link to="/support" className="text-muted-foreground hover:text-foreground transition">Support</Link></li>
-                            <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Status</a></li>
+                            
                         </ul>
                     </div>
                     <div>
                         <h4 className="font-semibold text-foreground mb-4">Legal</h4>
                         <ul className="space-y-2">
                             <li><Link to="/privacy" className="text-muted-foreground hover:text-foreground transition">Privacy</Link></li>
-                            <li><Link to="/support" className="text-muted-foreground hover:text-foreground transition">Terms</Link></li>
-                            <li><Link to="/support" className="text-muted-foreground hover:text-foreground transition">Security</Link></li>
+                            <li><Link to="/privacy" className="text-muted-foreground hover:text-foreground transition">Security</Link></li>
                             <li><Link to="/support" className="text-muted-foreground hover:text-foreground transition">Cookies</Link></li>
                         </ul>
                     </div>

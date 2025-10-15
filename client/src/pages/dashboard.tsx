@@ -603,14 +603,16 @@ export default function Dashboard() {
                   <p className="text-sm text-muted-foreground mb-3">
                     Our support team is here for you 24/7
                   </p>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-primary hover:text-primary/90 p-0 h-auto font-medium"
-                    data-testid="button-contact-support"
-                  >
-                    Contact Support <ArrowRight className="ml-1 h-4 w-4" />
-                  </Button>
+                  <Link to="/contact">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-primary hover:text-primary/90 p-0 h-auto font-medium"
+                      data-testid="button-contact-support"
+                    >
+                      Contact Support <ArrowRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </CardContent>

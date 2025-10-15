@@ -46,8 +46,7 @@ export default function Pricing() {
     }
 
     if (product.name === 'Enterprise') {
-      // For enterprise, show contact form or redirect to contact
-      alert('Please contact our sales team for Enterprise pricing');
+      setLocation('/contact');
       return;
     }
 
@@ -58,7 +57,7 @@ export default function Pricing() {
   const handleAuthSuccess = () => {
     if (selectedProduct) {
       if (selectedProduct.name === 'Enterprise') {
-        alert('Please contact our sales team for Enterprise pricing');
+        setLocation('/contact');
       } else {
         setLocation(`/checkout?product=${selectedProduct.id}&price=${selectedProduct.stripePriceId}`);
       }
