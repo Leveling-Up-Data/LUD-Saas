@@ -3,13 +3,20 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sparkles, ArrowRight, Play, CheckCircle2, Users, Database, Zap, TrendingUp } from "lucide-react";
 import { AuthModal } from "@/components/auth-modal";
+import { ApiTokenDialog } from "@/components/api-token-dialog";
 import { pb } from "@/lib/pocketbase";
+import { getApiTokenById } from "@/config/api-tokens";
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const [authModal, setAuthModal] = useState<{ open: boolean; mode: 'signin' | 'signup' }>({
     open: false,
     mode: 'signup'
+  });
+  const [apiDialog, setApiDialog] = useState<{ open: boolean; token: string; tokenName: string }>({
+    open: false,
+    token: '',
+    tokenName: ''
   });
 
   const handleGetStarted = () => {
@@ -19,6 +26,31 @@ export default function Home() {
   const handleViewDemo = () => {
     // For demo purposes, redirect to pricing
     setLocation('/pricing');
+  };
+
+  const handleApiClick = () => {
+    console.log('API click handler called'); // Debug log
+    
+    // Get the main API token from configuration
+    const apiToken = getApiTokenById('main-api-token');
+    console.log('API token found:', apiToken); // Debug log
+    
+    if (apiToken) {
+      setApiDialog({
+        open: true,
+        token: apiToken.token,
+        tokenName: apiToken.name
+      });
+    } else {
+      // Fallback if no token is configured
+      setApiDialog({
+        open: true,
+        token: 'sk-demo-token-1234567890abcdef',
+        tokenName: 'Demo API Token'
+      });
+    }
+    
+    console.log('Dialog state set:', { open: true, token: apiToken?.token || 'fallback', tokenName: apiToken?.name || 'Demo API Token' }); // Debug log
   };
 
   return (
@@ -70,6 +102,15 @@ export default function Home() {
                 View Demo
                 <Play className="ml-2 h-5 w-5" />
               </Button>
+              <Button 
+                onClick={handleApiClick}
+                variant="secondary"
+                size="lg"
+                className="px-8 py-4 text-lg w-full sm:w-auto"
+                data-testid="button-test-api"
+              >
+                Test API Dialog
+              </Button>
             </div>
 
             <div className="mt-12 flex flex-wrap justify-center items-center gap-8 text-muted-foreground">
@@ -95,6 +136,13 @@ export default function Home() {
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/20 rounded-full blur-3xl" />
         </div>
       </section>
+
+      {/* Debug Info - Remove this later */}
+      {apiDialog.open && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white p-2 rounded z-50">
+          Dialog should be open! Token: {apiDialog.token}
+        </div>
+      )}
 
       {/* Features Preview */}
       <section id="features" className="py-20 sm:py-32 bg-background">
@@ -166,7 +214,14 @@ export default function Home() {
               <ul className="space-y-2">
                 <li><a href="#features" className="text-muted-foreground hover:text-foreground transition">Features</a></li>
                 <li><Link to="/pricing" className="text-muted-foreground hover:text-foreground transition">Pricing</Link></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">API</a></li>
+                <li>
+                  <button 
+                    onClick={handleApiClick} 
+                    className="text-muted-foreground hover:text-primary transition cursor-pointer bg-transparent border-none p-0 text-left w-full hover:bg-primary/10 rounded px-1 py-0.5"
+                  >
+                    API
+                  </button>
+                </li>
                 <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Changelog</a></li>
               </ul>
             </div>
@@ -208,6 +263,14 @@ export default function Home() {
         mode={authModal.mode}
         onClose={() => setAuthModal({ open: false, mode: 'signup' })}
         onModeChange={(mode) => setAuthModal({ open: true, mode })}
+      />
+
+      {/* API Token Dialog */}
+      <ApiTokenDialog
+        open={apiDialog.open}
+        onOpenChange={(open) => setApiDialog({ ...apiDialog, open })}
+        token={apiDialog.token}
+        tokenName={apiDialog.tokenName}
       />
     </>
   );

@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useLocation, Link } from "wouter";
+import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
   Card,
@@ -11,19 +11,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { ApiTokenDialog } from "@/components/api-token-dialog";
 import { pb } from "@/lib/pocketbase";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Users,
-  Database,
-  Zap,
-  TrendingUp,
-  ArrowUp,
-  Gift,
-  UserPlus,
-  CreditCard,
-  Rocket,
-  Shield,
+import { getApiTokenById } from "@/config/api-tokens";
+import { 
+  Users, 
+  Database, 
+  Zap, 
+  TrendingUp, 
+  ArrowUp, 
+  Gift, 
+  UserPlus, 
+  CreditCard, 
+  Rocket, 
+  Shield, 
   Bell,
   Settings,
   FileText,
@@ -34,6 +36,11 @@ import {
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
+  const [apiDialog, setApiDialog] = useState<{ open: boolean; token: string; tokenName: string }>({
+    open: false,
+    token: '',
+    tokenName: ''
+  });
   const { toast } = useToast();
 
   const { data: userData, isLoading } = useQuery({
@@ -167,10 +174,86 @@ export default function Dashboard() {
   ];
 
   const quickActions = [
-    { icon: UserPlus, title: "Invite Users", href: "#" },
-    { icon: Key, title: "API Keys", href: "#" },
-    { icon: FileText, title: "Billing History", href: "#" },
-    { icon: Settings, title: "Settings", href: "/settings" },
+    { 
+      icon: UserPlus, 
+      title: "Invite Users", 
+      href: "#",
+      onClick: (e: React.MouseEvent) => {
+        e.preventDefault();
+        // TODO: Implement invite users functionality
+        console.log('Invite Users clicked');
+      }
+    },
+    {
+      icon: Key,
+      title: (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            // Get the test API token from configuration
+            const apiToken = getApiTokenById('test-api-token');
+            if (apiToken) {
+              setApiDialog({
+                open: true,
+                token: apiToken.token,
+                tokenName: apiToken.name
+              });
+            } else {
+              setApiDialog({
+                open: true,
+                token: 'sk-test-1234-56789-abcdefghijklmnop',
+                tokenName: 'Test API Token'
+              });
+            }
+          }}
+          className="underline decoration-dotted text-left focus:outline-none"
+        >
+          API Keys
+        </button>
+      ),
+      href: "#",
+      onClick: (e: React.MouseEvent) => {
+        e.preventDefault();
+        // Get the test API token from configuration
+        const apiToken = getApiTokenById('test-api-token');
+        
+        if (apiToken) {
+          setApiDialog({
+            open: true,
+            token: apiToken.token,
+            tokenName: apiToken.name
+          });
+        } else {
+          // Fallback if no token is configured
+          setApiDialog({
+            open: true,
+            token: 'sk-test-1234-56789-abcdefghijklmnop',
+            tokenName: 'Test API Token'
+          });
+        }
+      }
+    },
+    { 
+      icon: FileText, 
+      title: "Billing History", 
+      href: "#",
+      onClick: (e: React.MouseEvent) => {
+        e.preventDefault();
+        // TODO: Implement billing history functionality
+        console.log('Billing History clicked');
+      }
+    },
+    { 
+      icon: Settings, 
+      title: "Settings", 
+      href: "/settings",
+      onClick: (e: React.MouseEvent) => {
+        e.preventDefault();
+        // TODO: Implement settings functionality
+        console.log('Settings clicked');
+      }
+    }
   ];
 
   // Calculate trial days remaining
@@ -481,9 +564,8 @@ export default function Dashboard() {
                       key={index}
                       variant="ghost"
                       className="w-full justify-between p-4 h-auto group hover:bg-muted"
-                      data-testid={`button-${action.title
-                        .toLowerCase()
-                        .replace(" ", "-")}`}
+                      data-testid={`button-${action.title.toString().toLowerCase().replace(' ', '-')}`}
+<!--                       onClick={action.onClick} -->
                       onClick={() =>
                         action.href && action.href !== "#"
                           ? setLocation(action.href)
@@ -581,38 +663,19 @@ export default function Dashboard() {
             <div>
               <h4 className="font-semibold text-foreground mb-4">Starfish</h4>
               <ul className="space-y-2">
+                <li><a href="#features" className="text-muted-foreground hover:text-foreground transition">Features</a></li>
+                <li><a href="/pricing" className="text-muted-foreground hover:text-foreground transition">Pricing</a></li>
                 <li>
                   <a
-                    href="#features"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    Features
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/pricing"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    Pricing
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
+                    href="https://ocr-api.levelingupdata.com/docs"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-muted-foreground hover:text-foreground transition"
                   >
                     API
                   </a>
                 </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    Changelog
-                  </a>
-                </li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Changelog</a></li>
               </ul>
             </div>
             <div>
@@ -652,6 +715,14 @@ export default function Dashboard() {
           </div>
         </div>
       </footer>
+
+      {/* API Token Dialog */}
+      <ApiTokenDialog
+        open={apiDialog.open}
+        onOpenChange={(open) => setApiDialog({ ...apiDialog, open })}
+        token={apiDialog.token}
+        tokenName={apiDialog.tokenName}
+      />
     </div>
   );
 }

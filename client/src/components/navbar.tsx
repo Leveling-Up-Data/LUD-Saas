@@ -3,8 +3,10 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Box, Menu, X } from "lucide-react";
 import { AuthModal } from "./auth-modal";
+import { ApiTokenDialog } from "./api-token-dialog";
 import { pb } from "@/lib/pocketbase";
 import { useQuery } from "@tanstack/react-query";
+import { getApiTokenById } from "@/config/api-tokens";
 
 export function Navbar() {
   const [authModal, setAuthModal] = useState<{
@@ -15,6 +17,11 @@ export function Navbar() {
     mode: "signup",
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [apiDialog, setApiDialog] = useState<{ open: boolean; token: string; tokenName: string }>({
+    open: false,
+    token: '',
+    tokenName: ''
+  });
 
   const { data: authData } = useQuery({
     queryKey: ["user", pb.authStore.model?.id],
@@ -73,6 +80,26 @@ export function Navbar() {
     window.location.href = "/";
   };
 
+  const handleApiClick = () => {
+    // Get the main API token from configuration
+    const apiToken = getApiTokenById('main-api-token');
+    
+    if (apiToken) {
+      setApiDialog({
+        open: true,
+        token: apiToken.token,
+        tokenName: apiToken.name
+      });
+    } else {
+      // Fallback if no token is configured
+      setApiDialog({
+        open: true,
+        token: 'sk-demo-token-1234567890abcdef',
+        tokenName: 'Demo API Token'
+      });
+    }
+  };
+
   return (
     <>
       <nav className="bg-card/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
@@ -94,12 +121,12 @@ export function Navbar() {
               >
                 Pricing
               </Link>
+              <Link to="/docs" className="text-muted-foreground hover:text-foreground transition">
+                Docs
+              </Link>              
               <Link to="/products" className="text-muted-foreground hover:text-foreground transition">
                 Products
               </Link>
-              <a href="#docs" className="text-muted-foreground hover:text-foreground transition">
-                Docs
-              </a>
 
               {isAuthenticated ? (
                 <div className="flex items-center space-x-4">
@@ -167,12 +194,19 @@ export function Navbar() {
               >
                 Pricing
               </Link>
+              <Link to="/docs" className="block py-2 text-muted-foreground hover:text-foreground transition">
+                Docs
+              </Link>
+              <button 
+                onClick={handleApiClick}
+                className="block w-full text-left py-2 text-muted-foreground hover:text-foreground transition"
+              >
+                API
+              </button>
+              
               <Link to="/products" className="block py-2 text-muted-foreground hover:text-foreground transition">
                 Products
               </Link>
-              <a href="#docs" className="block py-2 text-muted-foreground hover:text-foreground transition">
-                Docs
-              </a>
 
               {isAuthenticated ? (
                 <div className="pt-2 space-y-2">
@@ -217,6 +251,14 @@ export function Navbar() {
         onModeChange={(mode: "signin" | "signup") =>
           setAuthModal({ open: true, mode })
         }
+      />
+
+      {/* API Token Dialog */}
+      <ApiTokenDialog
+        open={apiDialog.open}
+        onOpenChange={(open) => setApiDialog({ ...apiDialog, open })}
+        token={apiDialog.token}
+        tokenName={apiDialog.tokenName}
       />
     </>
   );
