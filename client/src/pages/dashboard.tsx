@@ -256,12 +256,11 @@ export default function Dashboard() {
       }
     }
   ];
-
   // Calculate trial days remaining
   const trialDaysRemaining = subscription?.trialEnd
     ? Math.max(0, Math.ceil((new Date(subscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
-
+  
   const trialProgress = subscription?.trialEnd
     ? ((14 - trialDaysRemaining) / 14) * 100
     : 0;
