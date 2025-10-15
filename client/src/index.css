@@ -4,6 +4,47 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Sentry Replay Masking Classes */
+.sentry-block {
+  /* Elements with this class will be completely hidden from replay */
+  visibility: hidden !important;
+}
+
+.sentry-ignore {
+  /* Elements with this class will be ignored by Sentry */
+  pointer-events: none !important;
+}
+
+.sentry-mask {
+  /* Text content will be masked in replay */
+  color: transparent !important;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Sensitive data masking */
+input[type="password"],
+input[type="email"],
+.sensitive-data {
+  @apply sentry-mask;
+}
+
+/* Performance monitoring indicators */
+.performance-indicator {
+  position: relative;
+}
+
+.performance-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 255, 0, 0.1);
+  pointer-events: none;
+  z-index: 1000;
+}
+
 :root {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   
