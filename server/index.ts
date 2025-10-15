@@ -14,12 +14,12 @@ Sentry.init({
     Sentry.httpIntegration(),
     Sentry.nativeNodeFetchIntegration(),
   ],
-  beforeSend(event) {
+  beforeSend(event: any) {
     // Filter out sensitive data
     if (event.request?.data) {
-      delete event.request.data.password;
-      delete event.request.data.token;
-      delete event.request.data.secret;
+      delete (event.request.data as any).password;
+      delete (event.request.data as any).token;
+      delete (event.request.data as any).secret;
     }
     return event;
   },
