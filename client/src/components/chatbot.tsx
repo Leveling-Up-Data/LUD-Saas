@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Bug } from 'lucide-react';
 import { pb } from '@/lib/pocketbase';
 import { useToast } from '@/hooks/use-toast';
+import { SentryFeedback } from './sentry-feedback';
 
 const BACKEND_URL = "https://n8n.levelingupdata.com/webhook/starfish";
 
@@ -154,16 +155,34 @@ export function Chatbot() {
 
   return (
     <>
-      {/* Floating Button */}
-      <button
-        id="chatbot-button"
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-primary to-secondary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-50 hover:scale-110"
-        data-testid="button-chatbot-open"
+      {/* Floating Buttons Stack */}
+      <div 
+        className="fixed bottom-6 right-6 flex flex-col items-center space-y-3 z-50"
         style={{ display: isOpen ? 'none' : 'flex' }}
       >
-        <MessageCircle size={24} />
-      </button>
+        {/* Report Bug Button */}
+        <SentryFeedback 
+          type="bug" 
+          trigger={
+            <button
+              className="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center hover:scale-110"
+              title="Report a Bug"
+            >
+              <Bug size={20} />
+            </button>
+          } 
+        />
+        
+        {/* Chatbot Button */}
+        <button
+          id="chatbot-button"
+          onClick={() => setIsOpen(true)}
+          className="w-14 h-14 bg-gradient-to-r from-primary to-secondary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center hover:scale-110"
+          data-testid="button-chatbot-open"
+        >
+          <MessageCircle size={24} />
+        </button>
+      </div>
 
       {/* Chat Window */}
       {isOpen && (
