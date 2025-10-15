@@ -37,10 +37,10 @@ Sentry.init({
       },
     }),
     // Additional integrations for better monitoring
-    Sentry.feedbackIntegration({
-      colorScheme: 'light',
-      showBranding: false,
-    }),
+    // Sentry.feedbackIntegration({
+    //   colorScheme: 'light',
+    //   showBranding: false,
+    // }),
   ],
   // Performance Monitoring
   tracesSampleRate: import.meta.env.MODE === 'production' ? 0.1 : 1.0,

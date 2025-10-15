@@ -24,6 +24,9 @@ COPY . .
 # Build the application
 RUN npm run build
 
+# Remove dev dependencies to reduce image size
+RUN npm prune --production
+
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 RUN chown -R appuser:appuser /app
