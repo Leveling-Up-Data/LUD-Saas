@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Loader2, Bug } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { pb } from '@/lib/pocketbase';
 import { useToast } from '@/hooks/use-toast';
-import { SentryFeedback } from './sentry-feedback';
 
 const BACKEND_URL = "https://n8n.levelingupdata.com/webhook/starfish";
 
@@ -155,40 +154,23 @@ export function Chatbot() {
 
   return (
     <>
-      {/* Floating Buttons Stack */}
-      <div 
-        className="fixed bottom-6 right-6 flex flex-col items-center space-y-3 z-50"
+      {/* Floating Button - Positioned above Sentry feedback */}
+      <button
+        id="chatbot-button"
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-20 right-6 w-14 h-14 bg-gradient-to-r from-primary to-secondary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-50 hover:scale-110"
+        data-testid="button-chatbot-open"
+        title="Open chatbot"
         style={{ display: isOpen ? 'none' : 'flex' }}
       >
-        {/* Report Bug Button */}
-        <SentryFeedback 
-          type="bug" 
-          trigger={
-            <button
-              className="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center hover:scale-110"
-              title="Report a Bug"
-            >
-              <Bug size={20} />
-            </button>
-          } 
-        />
-        
-        {/* Chatbot Button */}
-        <button
-          id="chatbot-button"
-          onClick={() => setIsOpen(true)}
-          className="w-14 h-14 bg-gradient-to-r from-primary to-secondary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center hover:scale-110"
-          data-testid="button-chatbot-open"
-        >
-          <MessageCircle size={24} />
-        </button>
-      </div>
+        <MessageCircle size={24} />
+      </button>
 
       {/* Chat Window */}
       {isOpen && (
         <div
           id="chatbot-window"
-          className="fixed bottom-6 right-6 w-96 h-[500px] bg-card border border-border rounded-lg shadow-2xl z-50 flex flex-col"
+          className="fixed bottom-20 right-6 w-96 h-[500px] bg-card border border-border rounded-lg shadow-2xl z-50 flex flex-col"
           data-testid="chatbot-window"
         >
           {/* Header */}
@@ -202,6 +184,7 @@ export function Chatbot() {
               onClick={() => setIsOpen(false)}
               className="hover:bg-white/20 rounded p-1 transition"
               data-testid="button-chatbot-close"
+              title="Close chatbot"
             >
               <X size={20} />
             </button>
@@ -264,6 +247,8 @@ export function Chatbot() {
                 disabled={isLoading || !isAuthenticated}
                 className={`text-sm text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary/90 cursor-pointer ${isLoading || !isAuthenticated ? 'opacity-60 cursor-not-allowed' : ''}`}
                 data-testid="input-chatbot-file"
+                title="Upload file"
+                aria-label="Upload file for chatbot"
               />
               {!isAuthenticated && (
                 <div className="text-xs text-muted-foreground">

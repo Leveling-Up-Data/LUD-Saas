@@ -6,16 +6,12 @@ import * as Sentry from "@sentry/react";
  * Capture user feedback with context
  */
 export const captureUserFeedback = (message: string, email?: string, name?: string) => {
-  // Use captureMessage instead of captureUserFeedback for compatibility
-  Sentry.captureMessage(`User Feedback: ${message}`, 'info');
-  
-  // Add user context if available
-  if (name || email) {
-    Sentry.setUser({
-      username: name,
-      email: email,
-    });
-  }
+  Sentry.captureUserFeedback({
+    event_id: Sentry.lastEventId(),
+    name: name || 'Anonymous',
+    email: email || '',
+    comments: message,
+  });
 };
 
 /**
