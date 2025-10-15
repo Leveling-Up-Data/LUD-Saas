@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
   Card,
@@ -43,7 +43,7 @@ export default function Dashboard() {
       if (!pb.authStore.model?.id) return null;
 
       // Get user data
-      const user = await pb.collection("users").getOne(pb.authStore.model.id);
+      const user = await pb.collection('users').getOne(pb.authStore.model.id);
 
       // Get subscription if exists
       let subscription = null;
@@ -175,13 +175,7 @@ export default function Dashboard() {
 
   // Calculate trial days remaining
   const trialDaysRemaining = subscription?.trialEnd
-    ? Math.max(
-        0,
-        Math.ceil(
-          (new Date(subscription.trialEnd).getTime() - Date.now()) /
-            (1000 * 60 * 60 * 24)
-        )
-      )
+    ? Math.max(0, Math.ceil((new Date(subscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
 
   const trialProgress = subscription?.trialEnd
@@ -236,6 +230,7 @@ export default function Dashboard() {
 
       {/* Dashboard Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
         {/* Subscription Status Card */}
         <Card className="mb-8 shadow-sm">
           <CardContent className="p-8">
@@ -280,22 +275,16 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Next Billing Date
-                    </p>
-                    <p
-                      className="text-lg font-semibold text-foreground"
-                      data-testid="text-next-billing"
-                    >
+                    <p className="text-sm text-muted-foreground mb-1">Next Billing Date</p>
+                    <p className="text-lg font-semibold text-foreground" data-testid="text-next-billing">
                       {subscription?.currentPeriodEnd
-                        ? new Date(
-                            subscription.currentPeriodEnd
-                          ).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })
-                        : "Not set"}
+                        ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })
+                        : 'Not set'
+                      }
                     </p>
                   </div>
                 </div>
@@ -438,6 +427,7 @@ export default function Dashboard() {
 
         {/* Recent Activity & Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
           {/* Recent Activity */}
           <div className="lg:col-span-2">
             <Card className="shadow-sm">
@@ -589,7 +579,7 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h4 className="font-semibold text-foreground mb-4">Product</h4>
+              <h4 className="font-semibold text-foreground mb-4">Starfish</h4>
               <ul className="space-y-2">
                 <li>
                   <a
@@ -628,112 +618,28 @@ export default function Dashboard() {
             <div>
               <h4 className="font-semibold text-foreground mb-4">Company</h4>
               <ul className="space-y-2">
-                <li>
-                  <a
-                    href="#"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    About
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    Blog
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    Careers
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    Contact
-                  </a>
-                </li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">About</a></li>
+                <li><a href="https://levelingupdata.com/blog/" className="text-muted-foreground hover:text-foreground transition">Blog</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Careers</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Contact</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-foreground mb-4">Resources</h4>
               <ul className="space-y-2">
-                <li>
-                  <a
-                    href="#"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    Documentation
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    Guides
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    Support
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    Status
-                  </a>
-                </li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Documentation</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Guides</a></li>
+                <li><Link to="/support" className="text-muted-foreground hover:text-foreground transition">Support</Link></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Status</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-foreground mb-4">Legal</h4>
               <ul className="space-y-2">
-                <li>
-                  <a
-                    href="#"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    Privacy
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    Terms
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    Security
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="text-muted-foreground hover:text-foreground transition"
-                  >
-                    Cookies
-                  </a>
-                </li>
+                <li><Link to="/privacy" className="text-muted-foreground hover:text-foreground transition">Privacy</Link></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Terms</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Security</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Cookies</a></li>
               </ul>
             </div>
           </div>

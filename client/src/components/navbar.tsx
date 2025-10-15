@@ -94,16 +94,10 @@ export function Navbar() {
               >
                 Pricing
               </Link>
-              <a
-                href="#features"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
-                Features
-              </a>
-              <a
-                href="#docs"
-                className="text-muted-foreground hover:text-foreground transition"
-              >
+              <Link to="/products" className="text-muted-foreground hover:text-foreground transition">
+                Products
+              </Link>
+              <a href="#docs" className="text-muted-foreground hover:text-foreground transition">
                 Docs
               </a>
 
@@ -136,14 +130,14 @@ export function Navbar() {
                 <>
                   <Button
                     variant="ghost"
-                    onClick={() => setAuthModal({ open: true, mode: "signin" })}
+                    onClick={() => setAuthModal({ open: true, mode: 'signin' })}
                     className="text-muted-foreground hover:text-foreground"
                     data-testid="button-signin"
                   >
                     Sign In
                   </Button>
                   <Button
-                    onClick={() => setAuthModal({ open: true, mode: "signup" })}
+                    onClick={() => setAuthModal({ open: true, mode: 'signup' })}
                     className="bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90"
                     data-testid="button-signup"
                   >
@@ -173,16 +167,10 @@ export function Navbar() {
               >
                 Pricing
               </Link>
-              <a
-                href="#features"
-                className="block py-2 text-muted-foreground hover:text-foreground transition"
-              >
-                Features
-              </a>
-              <a
-                href="#docs"
-                className="block py-2 text-muted-foreground hover:text-foreground transition"
-              >
+              <Link to="/products" className="block py-2 text-muted-foreground hover:text-foreground transition">
+                Products
+              </Link>
+              <a href="#docs" className="block py-2 text-muted-foreground hover:text-foreground transition">
                 Docs
               </a>
 
@@ -204,13 +192,13 @@ export function Navbar() {
               ) : (
                 <div className="pt-2 space-y-2">
                   <button
-                    onClick={() => setAuthModal({ open: true, mode: "signin" })}
+                    onClick={() => setAuthModal({ open: true, mode: 'signin' })}
                     className="block w-full text-left py-2 text-muted-foreground hover:text-foreground transition"
                   >
                     Sign In
                   </button>
                   <button
-                    onClick={() => setAuthModal({ open: true, mode: "signup" })}
+                    onClick={() => setAuthModal({ open: true, mode: 'signup' })}
                     className="block w-full text-left py-2 text-primary font-medium"
                   >
                     Get Started
