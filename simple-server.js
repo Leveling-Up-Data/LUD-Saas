@@ -2,12 +2,25 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import * as Sentry from '@sentry/node';
+
+// Initialize Sentry
+Sentry.init({
+  dsn: process.env.SENTRY_DSN || "https://a6c9e23b8ebe380495ffb8991a6541e6@log.levelingupdata.com/3",
+  environment: process.env.NODE_ENV || "development",
+  tracesSampleRate: 1.0,
+  integrations: [
+    Sentry.expressIntegration(),
+  ],
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 8080;
+
+// Sentry is already configured with expressIntegration in the init
 
 // Middleware
 app.use(express.json());
@@ -50,6 +63,16 @@ app.get('/api/products', (req, res) => {
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+// Test endpoint for Sentry error tracking
+app.get('/api/test-sentry', (req, res) => {
+  try {
+    throw new Error('This is a test error for Sentry!');
+  } catch (error) {
+    Sentry.captureException(error);
+    res.status(500).json({ message: 'Test error sent to Sentry', error: error.message });
+  }
 });
 
 // Serve static files from the built frontend
@@ -112,6 +135,9 @@ app.get('*', (req, res) => {
     `);
   }
 });
+
+// Sentry error handler must be before any other error middleware
+app.use(Sentry.expressErrorHandler());
 
 // Error handling
 app.use((err, req, res, next) => {
