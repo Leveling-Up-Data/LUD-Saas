@@ -127,17 +127,12 @@ export function Navbar() {
               <Link to="/products" className="text-muted-foreground hover:text-foreground transition">
                 Products
               </Link>
+              <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition">
+                Dashboard
+              </Link>
 
               {isAuthenticated ? (
                 <div className="flex items-center space-x-4">
-                  <Link to="/dashboard">
-                    <Button
-                      variant="ghost"
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      Dashboard
-                    </Button>
-                  </Link>
                   <div className="flex items-center space-x-3">
                     <Link to="/settings">
                       <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-semibold cursor-pointer" title="Account settings">
@@ -200,6 +195,9 @@ export function Navbar() {
               <Link to="/products" className="block py-2 text-muted-foreground hover:text-foreground transition">
                 Products
               </Link>
+              <Link to="/dashboard" className="block py-2 text-muted-foreground hover:text-foreground transition">
+                Dashboard
+              </Link>
               <Link to="/support" className="block py-2 text-muted-foreground hover:text-foreground transition">
                 Support
               </Link>
@@ -212,12 +210,6 @@ export function Navbar() {
 
               {isAuthenticated ? (
                 <div className="pt-2 space-y-2">
-                  <Link
-                    to="/dashboard"
-                    className="block py-2 text-muted-foreground hover:text-foreground transition"
-                  >
-                    Dashboard
-                  </Link>
                   <button
                     onClick={handleSignOut}
                     className="block w-full text-left py-2 text-muted-foreground hover:text-foreground transition"

@@ -11,6 +11,7 @@ import Pricing from "@/pages/pricing";
 import Products from "@/pages/products";
 import Support from "@/pages/support";
 import Privacy from "@/pages/privacy";
+import TermsAndConditions from "@/pages/terms-and-conditions";
 import Dashboard from "@/pages/dashboard";
 import Checkout from "@/pages/checkout";
 import NotFound from "@/pages/not-found";
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/products" component={Products} />
       <Route path="/support" component={Support} />
       <Route path="/privacy" component={Privacy} />
+      <Route path="/terms-and-conditions" component={TermsAndConditions} />
       <Route path="/docs" component={Docs} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/settings" component={SettingsPage} />
