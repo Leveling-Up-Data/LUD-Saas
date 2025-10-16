@@ -27,7 +27,7 @@ export class PocketBaseClient {
   private pb: PocketBase;
   private authData: AuthData | null = null;
 
-  constructor(baseUrl: string = 'https://uniformly-secure-joey.ngrok-free.app') {
+  constructor(baseUrl: string = 'https://pb.levelingupdata.com/') {
     this.pb = new PocketBase(baseUrl);
 
     if (typeof window !== 'undefined') {
