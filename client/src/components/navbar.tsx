@@ -9,9 +9,12 @@ import { useQuery } from "@tanstack/react-query";
 import { getApiTokenById } from "@/config/api-tokens";
 
 export function Navbar() {
-  const [authModal, setAuthModal] = useState<{ open: boolean; mode: 'signin' | 'signup' }>({
+  const [authModal, setAuthModal] = useState<{
+    open: boolean;
+    mode: "signin" | "signup";
+  }>({
     open: false,
-    mode: 'signup'
+    mode: "signup",
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [apiDialog, setApiDialog] = useState<{ open: boolean; token: string; tokenName: string }>({
@@ -21,21 +24,23 @@ export function Navbar() {
   });
 
   const { data: authData } = useQuery({
-    queryKey: ['user', pb.authStore.model?.id],
+    queryKey: ["user", pb.authStore.model?.id],
     enabled: pb.authStore.isValid,
     queryFn: async () => {
       if (!pb.authStore.model?.id) return null;
-      
+
       // Get user data
-      const user = await pb.collection('users').getOne(pb.authStore.model.id);
-      
+      const user = await pb.collection("users").getOne(pb.authStore.model.id);
+
       // Get subscription if exists
       let subscription = null;
       try {
-        const subscriptions = await pb.collection('subscriptions').getList(1, 1, {
-          filter: `userId = "${pb.authStore.model.id}"`,
-          sort: '-created'
-        });
+        const subscriptions = await pb
+          .collection("subscriptions")
+          .getList(1, 1, {
+            filter: `userId = "${pb.authStore.model.id}"`,
+            sort: "-created",
+          });
         if (subscriptions.items.length > 0) {
           subscription = subscriptions.items[0];
         }
@@ -51,16 +56,18 @@ export function Navbar() {
           name: user.name,
           stripeCustomerId: user.stripeCustomerId,
           stripeSubscriptionId: user.stripeSubscriptionId,
-          created: user.created
+          created: user.created,
         },
-        subscription: subscription ? {
-          id: subscription.id,
-          plan: subscription.plan,
-          status: subscription.status,
-          currentPeriodEnd: subscription.currentPeriodEnd,
-          amount: subscription.amount,
-          trialEnd: subscription.trialEnd
-        } : undefined
+        subscription: subscription
+          ? {
+              id: subscription.id,
+              plan: subscription.plan,
+              status: subscription.status,
+              currentPeriodEnd: subscription.currentPeriodEnd,
+              amount: subscription.amount,
+              trialEnd: subscription.trialEnd,
+            }
+          : undefined,
       };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -70,7 +77,7 @@ export function Navbar() {
 
   const handleSignOut = () => {
     pb.logout();
-    window.location.href = '/';
+    window.location.href = "/";
   };
 
   const handleApiClick = () => {
@@ -98,52 +105,65 @@ export function Navbar() {
       <nav className="bg-card/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link to="/" className="flex items-center space-x-2">
+            <Link to="/dashboard" className="flex items-center space-x-2">
               <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
                 <Box className="text-primary-foreground text-xl" size={20} />
               </div>
-              <span className="text-xl font-bold text-foreground">Leveling Up Data</span>
+              <span className="text-xl font-bold text-foreground">
+                Leveling Up Data
+              </span>
             </Link>
-            
+
             <div className="hidden md:flex items-center space-x-8">
-              <Link to="/pricing" className="text-muted-foreground hover:text-foreground transition">
+              <Link
+                to="/pricing"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
                 Pricing
               </Link>
-              <a href="#features" className="text-muted-foreground hover:text-foreground transition">
-                Features
-              </a>
               <Link to="/docs" className="text-muted-foreground hover:text-foreground transition">
                 Docs
+              </Link>              
+              <Link to="/products" className="text-muted-foreground hover:text-foreground transition">
+                Products
               </Link>
-              
-              
+
               {isAuthenticated ? (
                 <div className="flex items-center space-x-4">
                   <Link to="/dashboard">
-                    <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
+                    <Button
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-foreground"
+                    >
                       Dashboard
                     </Button>
                   </Link>
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                      {pb.authStore.model?.name?.charAt(0) || 'U'}
-                    </div>
-                    <Button variant="ghost" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
+                    <Link to="/settings">
+                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-semibold cursor-pointer" title="Account settings">
+                        {pb.authStore.model?.name?.charAt(0) || "U"}
+                      </div>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      onClick={handleSignOut}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
                       Sign Out
                     </Button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     onClick={() => setAuthModal({ open: true, mode: 'signin' })}
                     className="text-muted-foreground hover:text-foreground"
                     data-testid="button-signin"
                   >
                     Sign In
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => setAuthModal({ open: true, mode: 'signup' })}
                     className="bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90"
                     data-testid="button-signup"
@@ -153,8 +173,8 @@ export function Navbar() {
                 </>
               )}
             </div>
-            
-            <button 
+
+            <button
               className="md:hidden text-foreground"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               data-testid="button-mobile-menu"
@@ -163,17 +183,17 @@ export function Navbar() {
             </button>
           </div>
         </div>
-        
+
         {/* Mobile menu */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-card border-t border-border">
             <div className="px-4 pt-2 pb-4 space-y-2">
-              <Link to="/pricing" className="block py-2 text-muted-foreground hover:text-foreground transition">
+              <Link
+                to="/pricing"
+                className="block py-2 text-muted-foreground hover:text-foreground transition"
+              >
                 Pricing
               </Link>
-              <a href="#features" className="block py-2 text-muted-foreground hover:text-foreground transition">
-                Features
-              </a>
               <Link to="/docs" className="block py-2 text-muted-foreground hover:text-foreground transition">
                 Docs
               </Link>
@@ -184,24 +204,34 @@ export function Navbar() {
                 API
               </button>
               
+              <Link to="/products" className="block py-2 text-muted-foreground hover:text-foreground transition">
+                Products
+              </Link>
+
               {isAuthenticated ? (
                 <div className="pt-2 space-y-2">
-                  <Link to="/dashboard" className="block py-2 text-muted-foreground hover:text-foreground transition">
+                  <Link
+                    to="/dashboard"
+                    className="block py-2 text-muted-foreground hover:text-foreground transition"
+                  >
                     Dashboard
                   </Link>
-                  <button onClick={handleSignOut} className="block w-full text-left py-2 text-muted-foreground hover:text-foreground transition">
+                  <button
+                    onClick={handleSignOut}
+                    className="block w-full text-left py-2 text-muted-foreground hover:text-foreground transition"
+                  >
                     Sign Out
                   </button>
                 </div>
               ) : (
                 <div className="pt-2 space-y-2">
-                  <button 
+                  <button
                     onClick={() => setAuthModal({ open: true, mode: 'signin' })}
                     className="block w-full text-left py-2 text-muted-foreground hover:text-foreground transition"
                   >
                     Sign In
                   </button>
-                  <button 
+                  <button
                     onClick={() => setAuthModal({ open: true, mode: 'signup' })}
                     className="block w-full text-left py-2 text-primary font-medium"
                   >
@@ -214,11 +244,13 @@ export function Navbar() {
         )}
       </nav>
 
-      <AuthModal 
-        open={authModal.open} 
+      <AuthModal
+        open={authModal.open}
         mode={authModal.mode}
-        onClose={() => setAuthModal({ open: false, mode: 'signup' })}
-        onModeChange={(mode: 'signin' | 'signup') => setAuthModal({ open: true, mode })}
+        onClose={() => setAuthModal({ open: false, mode: "signup" })}
+        onModeChange={(mode: "signin" | "signup") =>
+          setAuthModal({ open: true, mode })
+        }
       />
 
       {/* API Token Dialog */}
