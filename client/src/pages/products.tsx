@@ -187,19 +187,14 @@ export default function Products() {
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <Link to="/pricing">
-                            <Button
-                                size="lg"
-                                className="bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90"
-                            >
+                            <Button size="lg" className="bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90">
                                 View Pricing Plans
                             </Button>
                         </Link>
                     </div>
                 </div>
             </section>
-
             <Footer />
-
         </div>
     );
 }

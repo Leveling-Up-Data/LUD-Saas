@@ -89,8 +89,10 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
+    const { setupVite } = await import("./vite");
     await setupVite(app, server);
   } else {
+    const { serveStatic } = await import("./vite");
     serveStatic(app);
   }
 
@@ -98,7 +100,7 @@ app.use((req, res, next) => {
   // Cloud Run requires the PORT environment variable to be used
   // Default to 8080 if not specified (Cloud Run standard)
   const port = parseInt(process.env.PORT || '8080', 10);
-  
+
   // Ensure we're in production mode for Cloud Run
   if (process.env.NODE_ENV !== 'production') {
     process.env.NODE_ENV = 'production';
