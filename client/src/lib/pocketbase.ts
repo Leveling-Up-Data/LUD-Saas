@@ -1,14 +1,6 @@
 import PocketBase from 'pocketbase';
 
-export interface SubscriptionData {
-  id: string;
-  plan: string;
-  status: string;
-  currentPeriodEnd: string;
-  amount: number;
-  trialEnd?: string;
-}
-
+// Export types for compatibility
 export interface AuthData {
   user: {
     id: string;
@@ -17,7 +9,7 @@ export interface AuthData {
     name?: string;
     stripeCustomerId?: string;
     stripeSubscriptionId?: string;
-    createdAt: string;
+    created: string;
   };
   subscription?: SubscriptionData;
   token: string;
@@ -39,7 +31,6 @@ export class PocketBaseClient {
     return this.pb.authStore.isValid;
   }
 
-  get authStore() {
     return {
       model: this.authData?.user || null,
       isValid: this.isValid,
@@ -50,7 +41,11 @@ export class PocketBaseClient {
         localStorage.removeItem('auth');
       },
     };
+  } catch (error) {
+    console.error('Error fetching user with subscription:', error);
+    return null;
   }
+}
 
   /** Login with email & password */
   async authWithPassword(email: string, password: string): Promise<AuthData> {

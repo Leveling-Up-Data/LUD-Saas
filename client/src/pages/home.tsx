@@ -190,7 +190,7 @@ export default function Home() {
           </div>
           
           <div className="border-t border-border pt-8 text-center">
-            <p className="text-muted-foreground text-sm">© 2025 SaaSFlow. All rights reserved.</p>
+            <p className="text-muted-foreground text-sm">© Leveling Up Data - {new Date().getFullYear()} All Rights Reserved.</p>
           </div>
         </div>
       </footer>

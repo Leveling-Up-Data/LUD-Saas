@@ -218,19 +218,20 @@ export default function Checkout() {
       try {
         setLoading(true);
         
-        const response = await apiRequest('POST', '/api/create-subscription', {
-          userId: pb.authStore.model?.id,
-          stripePriceId
+        // Call PocketBase custom route for subscription creation
+        const data = await pb.send('/api/create-subscription', {
+          method: 'POST',
+          body: {
+            userId: pb.authStore.model?.id,
+            stripePriceId
+          }
         });
-        
-        const data = await response.json();
         
         if (data.clientSecret) {
           setClientSecret(data.clientSecret);
           
           // Fetch product details for display
-          const productsResponse = await apiRequest('GET', '/api/products');
-          const products = await productsResponse.json();
+          const products = await pb.collection('products').getFullList();
           const product = products.find((p: any) => p.stripePriceId === stripePriceId);
           
           if (product) {
@@ -371,6 +372,54 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-card border-t border-border py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <h4 className="font-semibold text-foreground mb-4">Product</h4>
+              <ul className="space-y-2">
+                <li><a href="#features" className="text-muted-foreground hover:text-foreground transition">Features</a></li>
+                <li><a href="/pricing" className="text-muted-foreground hover:text-foreground transition">Pricing</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">API</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Changelog</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-foreground mb-4">Company</h4>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">About</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Blog</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Careers</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Contact</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-foreground mb-4">Resources</h4>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Documentation</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Guides</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Support</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Status</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-foreground mb-4">Legal</h4>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Privacy</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Terms</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Security</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Cookies</a></li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="border-t border-border pt-8 text-center">
+            <p className="text-muted-foreground text-sm">© Leveling Up Data - {new Date().getFullYear()} All Rights Reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
