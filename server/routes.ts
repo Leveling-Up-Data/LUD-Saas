@@ -24,13 +24,31 @@ const loginSchema = z.object({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  
+
   // Health check endpoint
   app.get('/api/health', (req, res) => {
     res.json({ status: 'healthy', timestamp: new Date().toISOString() });
   });
 
   // Products endpoint (fallback if PocketBase is not available)
+  // Invite endpoint (stub)
+  const inviteSchema = z.object({
+    email: z.string().email(),
+    inviterId: z.string().min(1),
+  });
+
+  app.post('/api/invite', (req, res) => {
+    try {
+      const { email, inviterId } = inviteSchema.parse(req.body);
+      // TODO: Integrate actual email sending and persistence
+      // For now, respond with success and echo
+      res.json({ status: 'sent', email, inviterId, timestamp: new Date().toISOString() });
+    } catch (err: any) {
+      const message = err?.message || 'Invalid request';
+      res.status(400).json({ message });
+    }
+  });
+
   app.get('/api/products', (req, res) => {
     const products = [
       {
@@ -61,7 +79,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         priority: 3
       }
     ];
-    
+
     res.json(products);
   });
 
@@ -78,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const sig = req.headers['stripe-signature'] as string;
-    
+
     try {
       const event = stripe.webhooks.constructEvent(
         req.rawBody as Buffer,
@@ -90,7 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case 'customer.subscription.updated':
         case 'customer.subscription.deleted':
           const subscription = event.data.object as Stripe.Subscription;
-          
+
           // Update subscription in database
           const dbSubscription = await storage.getSubscriptionByStripeId(subscription.id);
           if (dbSubscription) {

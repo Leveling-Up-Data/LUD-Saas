@@ -16,6 +16,7 @@ import Checkout from "@/pages/checkout";
 import NotFound from "@/pages/not-found";
 import SettingsPage from "@/pages/settings";
 import Contact from "@/pages/contact";
+import Invite from "@/pages/invite";
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/contact" component={Contact} />
+      <Route path="/invite" component={Invite} />
       <Route path="/checkout" component={Checkout} />
       <Route component={NotFound} />
     </Switch>

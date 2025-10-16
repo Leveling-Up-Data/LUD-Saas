@@ -134,55 +134,79 @@ export default function Dashboard() {
 
   const user = (userData as any)?.user;
   const subscription = (userData as any)?.subscription;
+  const displayName = (user?.name && String(user.name).trim())
+    || (user?.username && String(user.username).trim())
+    || (user?.email ? String(user.email).split("@")[0] : "")
+    || "User";
 
-  // Mock data for demo
+  // Project metrics (simple illustrative stats)
   const stats = {
-    users: 2847,
-    storageUsed: 48,
-    apiRequests: 487000,
-    uptime: 99.9,
+    users: (userData as any)?.user ? 1 : 0,
+    storageUsed: 11, // % of quota used
+    apiRequests: 12500, // requests this month
+    uptime: 99.99,
   };
 
+  // Build recent activity. Pull last invite (if any) from localStorage
+  const lastInviteRaw = typeof window !== 'undefined' ? localStorage.getItem('lastInvite') : null;
+  let inviteActivity: { email?: string; time?: string } | null = null;
+  if (lastInviteRaw) {
+    try {
+      const parsed = JSON.parse(lastInviteRaw);
+      const at = parsed?.at ? new Date(parsed.at) : null;
+      const rel = at ? timeSince(at) : undefined;
+      inviteActivity = { email: parsed?.email, time: rel };
+    } catch (_) {
+      inviteActivity = null;
+    }
+  }
+
+  function timeSince(date: Date) {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    const intervals: [number, string][] = [
+      [60 * 60 * 24, 'day'],
+      [60 * 60, 'hour'],
+      [60, 'minute'],
+    ];
+    for (const [secs, label] of intervals) {
+      const v = Math.floor(seconds / secs);
+      if (v >= 1) return `${v} ${label}${v > 1 ? 's' : ''} ago`;
+    }
+    return `${seconds} sec${seconds !== 1 ? 's' : ''} ago`;
+  }
+
   const activities = [
-    {
+    inviteActivity && {
       icon: UserPlus,
-      title: "New user registered",
-      description: "sarah@example.com joined your platform",
-      time: "2 hours ago",
+      title: "Invite sent",
+      description: inviteActivity.email ? `Invitation sent to ${inviteActivity.email}` : "User invitation sent",
+      time: inviteActivity.time || "just now",
       color: "text-primary",
     },
-    {
+    subscription?.status && {
       icon: CreditCard,
-      title: "Payment received",
-      description: "Monthly subscription renewed successfully",
-      time: "5 hours ago",
+      title: subscription?.status === 'trialing' ? 'Trial started' : 'Subscription active',
+      description: subscription?.plan ? `${subscription.plan} plan` : 'Subscription updated',
+      time: subscription?.currentPeriodEnd ? `${timeSince(new Date(subscription.currentPeriodEnd))}` : undefined,
       color: "text-secondary",
     },
     {
       icon: Rocket,
-      title: "New feature deployed",
-      description: "Advanced analytics dashboard is now live",
-      time: "1 day ago",
+      title: "Workspace created",
+      description: displayName ? `${displayName}'s workspace is ready` : 'Workspace initialized',
+      time: user?.created ? `${timeSince(new Date(user.created))}` : undefined,
       color: "text-accent",
     },
-    {
-      icon: Shield,
-      title: "Security update",
-      description: "Two-factor authentication enabled",
-      time: "3 days ago",
-      color: "text-chart-4",
-    },
-  ];
+  ].filter(Boolean) as Array<{ icon: any; title: string; description: string; time?: string; color: string }>;
 
   const quickActions = [
     {
       icon: UserPlus,
       title: "Invite Users",
-      href: "#",
+      href: "/invite",
       onClick: (e: React.MouseEvent) => {
         e.preventDefault();
-        // TODO: Implement invite users functionality
-        console.log('Invite Users clicked');
+        setLocation('/invite');
       }
     },
     {
@@ -236,16 +260,6 @@ export default function Dashboard() {
       }
     },
     {
-      icon: FileText,
-      title: "Billing History",
-      href: "#",
-      onClick: (e: React.MouseEvent) => {
-        e.preventDefault();
-        // TODO: Implement billing history functionality
-        console.log('Billing History clicked');
-      }
-    },
-    {
       icon: Settings,
       title: "Settings",
       href: "/settings",
@@ -260,7 +274,7 @@ export default function Dashboard() {
   const trialDaysRemaining = subscription?.trialEnd
     ? Math.max(0, Math.ceil((new Date(subscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
-  
+
   const trialProgress = subscription?.trialEnd
     ? ((14 - trialDaysRemaining) / 14) * 100
     : 0;
@@ -284,11 +298,11 @@ export default function Dashboard() {
                   className="font-medium text-foreground"
                   data-testid="text-user-name"
                 >
-                  {user?.name || "User"}
+                  {displayName}
                 </span>
               </p>
             </div>
-            <div className="flex items-center space-x-4">
+            {/* <div className="flex items-center space-x-4">
               <Button
                 variant="outline"
                 size="sm"
@@ -306,7 +320,7 @@ export default function Dashboard() {
                   {user?.name?.charAt(0) || "U"}
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

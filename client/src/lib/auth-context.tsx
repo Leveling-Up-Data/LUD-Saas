@@ -6,7 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { pb, AuthData } from "@/lib/pocketbase";
+import { pb, AuthData, persistAuthToCookie, clearAuthCookie } from "@/lib/pocketbase";
 
 interface AuthContextValue {
   user: AuthData["user"] | null;
@@ -57,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await pb.authWithPassword(email, password);
       setUser(data.user);
       setSubscription(data.subscription);
+      persistAuthToCookie();
     } finally {
       setLoading(false);
     }
@@ -76,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await pb.authWithPassword(email, password);
         setUser(data.user);
         setSubscription(data.subscription);
+        persistAuthToCookie();
       } finally {
         setLoading(false);
       }
@@ -90,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data) {
         setUser(data.user);
         setSubscription(data.subscription);
+        persistAuthToCookie();
       } else {
         setUser(null);
         setSubscription(undefined);
@@ -101,6 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(() => {
     pb.logout();
+    clearAuthCookie();
     setUser(null);
     setSubscription(undefined);
   }, []);
