@@ -11,19 +11,26 @@ import Pricing from "@/pages/pricing";
 import Products from "@/pages/products";
 import Support from "@/pages/support";
 import Privacy from "@/pages/privacy";
+import TermsAndConditions from "@/pages/terms-and-conditions";
 import Dashboard from "@/pages/dashboard";
 import Checkout from "@/pages/checkout";
 import NotFound from "@/pages/not-found";
 import SettingsPage from "@/pages/settings";
+import Contact from "@/pages/contact";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/pricing" component={Pricing} />
+      <Route path="/products" component={Products} />
+      <Route path="/support" component={Support} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms-and-conditions" component={TermsAndConditions} />
       <Route path="/docs" component={Docs} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/settings" component={SettingsPage} />
+      <Route path="/contact" component={Contact} />
       <Route path="/checkout" component={Checkout} />
       <Route component={NotFound} />
     </Switch>

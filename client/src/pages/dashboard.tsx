@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ApiTokenDialog } from "@/components/api-token-dialog";
+import { Footer } from "@/components/footer";
 import { pb } from "@/lib/pocketbase";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -75,13 +76,13 @@ export default function Dashboard() {
         },
         subscription: subscription
           ? {
-              id: subscription.id,
-              plan: subscription.plan,
-              status: subscription.status,
-              currentPeriodEnd: subscription.currentPeriodEnd,
-              amount: subscription.amount,
-              trialEnd: subscription.trialEnd,
-            }
+            id: subscription.id,
+            plan: subscription.plan,
+            status: subscription.status,
+            currentPeriodEnd: subscription.currentPeriodEnd,
+            amount: subscription.amount,
+            trialEnd: subscription.trialEnd,
+          }
           : undefined,
       };
     },
@@ -169,9 +170,9 @@ export default function Dashboard() {
   ];
 
   const quickActions = [
-    { 
-      icon: UserPlus, 
-      title: "Invite Users", 
+    {
+      icon: UserPlus,
+      title: "Invite Users",
       href: "#",
       onClick: (e: React.MouseEvent) => {
         e.preventDefault();
@@ -188,9 +189,9 @@ export default function Dashboard() {
         setApiDialog(true);
       }
     },
-    { 
-      icon: FileText, 
-      title: "Billing History", 
+    {
+      icon: FileText,
+      title: "Billing History",
       href: "#",
       onClick: (e: React.MouseEvent) => {
         e.preventDefault();
@@ -198,9 +199,9 @@ export default function Dashboard() {
         console.log('Billing History clicked');
       }
     },
-    { 
-      icon: Settings, 
-      title: "Settings", 
+    {
+      icon: Settings,
+      title: "Settings",
       href: "/settings",
       onClick: (e: React.MouseEvent) => {
         e.preventDefault();
@@ -209,12 +210,11 @@ export default function Dashboard() {
       }
     }
   ];
-
   // Calculate trial days remaining
   const trialDaysRemaining = subscription?.trialEnd
     ? Math.max(0, Math.ceil((new Date(subscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
-
+  
   const trialProgress = subscription?.trialEnd
     ? ((14 - trialDaysRemaining) / 14) * 100
     : 0;
@@ -522,7 +522,9 @@ export default function Dashboard() {
                       onClick={action.onClick}
                     >
                       <div className="flex items-center space-x-3">
-                        <action.icon className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
+                        {action.icon && (
+                          <action.icon className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
+                        )}
                         <span className="font-medium">{action.title}</span>
                       </div>
                       <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition" />
@@ -531,21 +533,23 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
+          </div>
 
-            {/* Support Card */}
-            <Card className="shadow-sm">
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <LifeBuoy className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground mb-1">
-                      Need Help?
-                    </p>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Our support team is here for you 24/7
-                    </p>
+          {/* Support Card */}
+          <Card className="shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-start space-x-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <LifeBuoy className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-foreground mb-1">
+                    Need Help?
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Our support team is here for you 24/7
+                  </p>
+                  <Link to="/contact">
                     <Button
                       size="sm"
                       variant="ghost"
@@ -554,116 +558,58 @@ export default function Dashboard() {
                     >
                       Contact Support <ArrowRight className="ml-1 h-4 w-4" />
                     </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Payment Method Section */}
-        {subscription && (
-          <Card className="mt-8 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-xl">Payment Method</CardTitle>
-              <CardDescription>Manage your billing information</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center">
-                    <CreditCard className="h-8 w-8 text-white" />
-                  </div>
-                  <div>
-                    <p
-                      className="font-semibold text-foreground"
-                      data-testid="text-payment-method"
-                    >
-                      •••• •••• •••• 4242
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Expires 12/2025
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex space-x-3">
-                  <Button variant="outline" data-testid="button-update-card">
-                    Update Card
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    data-testid="button-remove-card"
-                  >
-                    Remove
-                  </Button>
+                  </Link>
                 </div>
               </div>
             </CardContent>
           </Card>
-        )}
+        </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-card border-t border-border py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Starfish</h4>
-              <ul className="space-y-2">
-                <li><a href="#features" className="text-muted-foreground hover:text-foreground transition">Features</a></li>
-                <li><a href="/pricing" className="text-muted-foreground hover:text-foreground transition">Pricing</a></li>
-                <li>
-                  <a
-                    href="https://ocr-api.levelingupdata.com/docs"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-foreground transition"
+      {/* Payment Method Section */}
+      {subscription && (
+        <Card className="mt-8 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-xl">Payment Method</CardTitle>
+            <CardDescription>Manage your billing information</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center">
+                  <CreditCard className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <p
+                    className="font-semibold text-foreground"
+                    data-testid="text-payment-method"
                   >
-                    API
-                  </a>
-                </li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Changelog</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Company</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">About</a></li>
-                <li><a href="https://levelingupdata.com/blog/" className="text-muted-foreground hover:text-foreground transition">Blog</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Careers</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Resources</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Documentation</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Guides</a></li>
-                <li><Link to="/support" className="text-muted-foreground hover:text-foreground transition">Support</Link></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Status</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Legal</h4>
-              <ul className="space-y-2">
-                <li><Link to="/privacy" className="text-muted-foreground hover:text-foreground transition">Privacy</Link></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Terms</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Security</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground transition">Cookies</a></li>
-              </ul>
-            </div>
-          </div>
+                    •••• •••• •••• 4242
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Expires 12/2025
+                  </p>
+                </div>
+              </div>
 
-          <div className="border-t border-border pt-8 text-center">
-            <p className="text-muted-foreground text-sm">
-              © Leveling Up Data - {new Date().getFullYear()} All Rights
-              Reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+              <div className="flex space-x-3">
+                <Button variant="outline" data-testid="button-update-card">
+                  Update Card
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  data-testid="button-remove-card"
+                >
+                  Remove
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Footer />
 
       {/* API Token Dialog */}
       <ApiTokenDialog

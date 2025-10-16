@@ -1,5 +1,5 @@
 # Use Node.js 18 slim image
-FROM node:18-slim
+FROM node:20-slim
 
 # Set working directory
 WORKDIR /app
@@ -15,14 +15,17 @@ RUN apt-get update && apt-get install -y \
 # Copy package files
 COPY package*.json ./
 
-# Install all dependencies
-RUN npm ci
+# Install all dependencies (use install to allow lockfile updates for optional deps)
+RUN npm install
 
 # Copy source code
 COPY . .
 
 # Build the application
 RUN npm run build
+
+# Remove dev dependencies to reduce image size
+RUN npm prune --production
 
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
@@ -40,5 +43,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Start the built server
-CMD ["node", "dist/index.js"]
+# Start the simple server
+CMD ["node", "simple-server.js"]

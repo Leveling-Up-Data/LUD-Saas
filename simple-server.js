@@ -2,12 +2,37 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import * as Sentry from '@sentry/node';
+
+// Initialize Sentry with profiling
+Sentry.init({
+  dsn: process.env.SENTRY_DSN || "https://a6c9e23b8ebe380495ffb8991a6541e6@log.levelingupdata.com/3",
+  environment: process.env.NODE_ENV || "development",
+  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+  profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+  integrations: [
+    Sentry.expressIntegration(),
+    Sentry.httpIntegration(),
+    Sentry.nativeNodeFetchIntegration(),
+  ],
+  beforeSend(event) {
+    // Filter out sensitive data
+    if (event.request?.data) {
+      delete event.request.data.password;
+      delete event.request.data.token;
+      delete event.request.data.secret;
+    }
+    return event;
+  },
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 8080;
+
+// Sentry is already configured with expressIntegration in the init
 
 // Middleware
 app.use(express.json());
@@ -50,6 +75,78 @@ app.get('/api/products', (req, res) => {
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+// Test endpoint for Sentry error tracking
+app.get('/api/test-sentry', (req, res) => {
+  try {
+    throw new Error('This is a test error for Sentry!');
+  } catch (error) {
+    Sentry.captureException(error);
+    res.status(500).json({ message: 'Test error sent to Sentry', error: error.message });
+  }
+});
+
+// Test endpoint for Sentry performance monitoring
+app.get('/api/test-performance', async (req, res) => {
+  const span = Sentry.startSpan({
+    name: 'Test Performance Endpoint',
+    op: 'http.server',
+  }, async (span) => {
+    try {
+      // Simulate some work
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Add some breadcrumbs
+      Sentry.addBreadcrumb({
+        message: 'Processing performance test',
+        category: 'test',
+        level: 'info',
+      });
+      
+      span.setStatus({ code: 1, message: 'ok' });
+      res.json({ 
+        message: 'Performance test completed',
+        duration: '100ms',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      span.setStatus({ code: 2, message: 'internal_error' });
+      Sentry.captureException(error);
+      res.status(500).json({ message: 'Performance test failed', error: error.message });
+    }
+  });
+});
+
+// Test endpoint for Sentry profiling
+app.get('/api/test-profiling', (req, res) => {
+  const startTime = Date.now();
+  
+  // Simulate CPU-intensive work for profiling
+  let result = 0;
+  for (let i = 0; i < 1000000; i++) {
+    result += Math.sqrt(i);
+  }
+  
+  const duration = Date.now() - startTime;
+  
+  Sentry.addBreadcrumb({
+    message: 'Profiling test completed',
+    category: 'profiling',
+    level: 'info',
+    data: {
+      duration: `${duration}ms`,
+      iterations: 1000000,
+      result: result.toFixed(2)
+    }
+  });
+  
+  res.json({
+    message: 'Profiling test completed',
+    duration: `${duration}ms`,
+    iterations: 1000000,
+    result: result.toFixed(2)
+  });
 });
 
 // Serve static files from the built frontend
@@ -112,6 +209,9 @@ app.get('*', (req, res) => {
     `);
   }
 });
+
+// Sentry error handler must be before any other error middleware
+app.use(Sentry.expressErrorHandler());
 
 // Error handling
 app.use((err, req, res, next) => {
