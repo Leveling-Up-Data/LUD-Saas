@@ -749,3 +749,505 @@ export default function Dashboard() {
     </div>
   );
 }
+
+
+// import { useState } from "react";
+// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+// import { Label } from "@/components/ui/label";
+// import { Textarea } from "@/components/ui/textarea";
+// import { Switch } from "@/components/ui/switch";
+// import { Badge } from "@/components/ui/badge";
+// import { Separator } from "@/components/ui/separator";
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// import { 
+//   User, 
+//   Mail, 
+//   Phone, 
+//   Shield, 
+//   Bell, 
+//   Key, 
+//   CreditCard, 
+//   Globe,
+//   Smartphone,
+//   Save,
+//   Upload,
+//   Crown,
+//   Building,
+//   Settings as SettingsIcon,
+//   Trash2,
+//   Eye,
+//   EyeOff
+// } from "lucide-react";
+// import { useAuth } from "@/hooks/useAuth";
+
+// export default function Settings() {
+//   const { user } = useAuth();
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [profileData, setProfileData] = useState({
+//     firstName: user?.firstName || "John",
+//     lastName: user?.lastName || "Anderson",
+//     email: user?.email || "john@acmecorp.com",
+//     phoneNumber: "+1 (555) 123-4567",
+//     bio: "Business Admin at Acme Corp. Passionate about AI automation and business efficiency.",
+//     timezone: "America/New_York",
+//     language: "English"
+//   });
+
+//   const [securitySettings, setSecuritySettings] = useState({
+//     mfaEnabled: false,
+//     emailNotifications: true,
+//     smsNotifications: false,
+//     loginAlerts: true,
+//     apiAccess: false
+//   });
+
+//   const [businessSettings, setBusinessSettings] = useState({
+//     companyName: "Acme Corp",
+//     industry: "Technology",
+//     teamSize: "10-50",
+//     plan: "Business Pro",
+//     billingEmail: "billing@acmecorp.com"
+//   });
+
+//   return (
+//     <div className="min-h-screen bg-[#0A0B14] relative">
+//       {/* Background gradients */}
+//       <div className="absolute inset-0 bg-gradient-to-br from-[#0A0B14] via-[#1A1B2E] to-[#16213E] opacity-50" />
+//       <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
+//       <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+      
+//       <div className="relative z-10 p-8 space-y-8">
+//         {/* Header */}
+//         <div className="flex justify-between items-start">
+//           <div>
+//             <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent mb-2">
+//               Settings
+//             </h1>
+//             <p className="text-slate-400">Manage your profile, account, and business settings</p>
+//           </div>
+//         </div>
+
+//         {/* Settings Tabs */}
+//         <Tabs defaultValue="profile" className="w-full">
+//           <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 border border-slate-700">
+//             <TabsTrigger value="profile" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+//               <User className="w-4 h-4 mr-2" />
+//               Profile
+//             </TabsTrigger>
+//             <TabsTrigger value="account" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+//               <SettingsIcon className="w-4 h-4 mr-2" />
+//               Account
+//             </TabsTrigger>
+//             <TabsTrigger value="security" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+//               <Shield className="w-4 h-4 mr-2" />
+//               Security
+//             </TabsTrigger>
+//             <TabsTrigger value="business" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+//               <Building className="w-4 h-4 mr-2" />
+//               Business
+//             </TabsTrigger>
+//           </TabsList>
+
+//           {/* Profile Settings */}
+//           <TabsContent value="profile" className="space-y-6">
+//             <Card className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 border border-white/10 backdrop-blur-xl">
+//               <CardHeader>
+//                 <CardTitle className="text-white flex items-center">
+//                   <User className="w-5 h-5 mr-2" />
+//                   Profile Information
+//                 </CardTitle>
+//               </CardHeader>
+//               <CardContent className="space-y-6">
+//                 {/* Profile Picture */}
+//                 <div className="flex items-center space-x-6">
+//                   <div className="w-20 h-20 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/20">
+//                     <User className="w-10 h-10 text-white" />
+//                   </div>
+//                   <div>
+//                     <Button variant="outline" className="mr-3">
+//                       <Upload className="w-4 h-4 mr-2" />
+//                       Upload Photo
+//                     </Button>
+//                     <Button variant="ghost" className="text-red-400 hover:text-red-300">
+//                       Remove
+//                     </Button>
+//                   </div>
+//                 </div>
+
+//                 {/* Name Fields */}
+//                 <div className="grid grid-cols-2 gap-4">
+//                   <div className="space-y-2">
+//                     <Label htmlFor="firstName" className="text-slate-300">First Name</Label>
+//                     <Input
+//                       id="firstName"
+//                       value={profileData.firstName}
+//                       onChange={(e) => setProfileData(prev => ({ ...prev, firstName: e.target.value }))}
+//                       className="bg-slate-800/50 border-slate-600 text-white"
+//                     />
+//                   </div>
+//                   <div className="space-y-2">
+//                     <Label htmlFor="lastName" className="text-slate-300">Last Name</Label>
+//                     <Input
+//                       id="lastName"
+//                       value={profileData.lastName}
+//                       onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value }))}
+//                       className="bg-slate-800/50 border-slate-600 text-white"
+//                     />
+//                   </div>
+//                 </div>
+
+//                 {/* Bio */}
+//                 <div className="space-y-2">
+//                   <Label htmlFor="bio" className="text-slate-300">Bio</Label>
+//                   <Textarea
+//                     id="bio"
+//                     value={profileData.bio}
+//                     onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
+//                     className="bg-slate-800/50 border-slate-600 text-white min-h-20"
+//                     placeholder="Tell us about yourself..."
+//                   />
+//                 </div>
+
+//                 {/* Preferences */}
+//                 <div className="grid grid-cols-2 gap-4">
+//                   <div className="space-y-2">
+//                     <Label htmlFor="timezone" className="text-slate-300">Timezone</Label>
+//                     <Input
+//                       id="timezone"
+//                       value={profileData.timezone}
+//                       onChange={(e) => setProfileData(prev => ({ ...prev, timezone: e.target.value }))}
+//                       className="bg-slate-800/50 border-slate-600 text-white"
+//                     />
+//                   </div>
+//                   <div className="space-y-2">
+//                     <Label htmlFor="language" className="text-slate-300">Language</Label>
+//                     <Input
+//                       id="language"
+//                       value={profileData.language}
+//                       onChange={(e) => setProfileData(prev => ({ ...prev, language: e.target.value }))}
+//                       className="bg-slate-800/50 border-slate-600 text-white"
+//                     />
+//                   </div>
+//                 </div>
+
+//                 <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+//                   <Save className="w-4 h-4 mr-2" />
+//                   Save Profile
+//                 </Button>
+//               </CardContent>
+//             </Card>
+//           </TabsContent>
+
+//           {/* Account Settings */}
+//           <TabsContent value="account" className="space-y-6">
+//             <Card className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 border border-white/10 backdrop-blur-xl">
+//               <CardHeader>
+//                 <CardTitle className="text-white flex items-center">
+//                   <Mail className="w-5 h-5 mr-2" />
+//                   Contact Information
+//                 </CardTitle>
+//               </CardHeader>
+//               <CardContent className="space-y-4">
+//                 <div className="space-y-2">
+//                   <Label htmlFor="email" className="text-slate-300">Email Address</Label>
+//                   <Input
+//                     id="email"
+//                     type="email"
+//                     value={profileData.email}
+//                     onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
+//                     className="bg-slate-800/50 border-slate-600 text-white"
+//                   />
+//                 </div>
+//                 <div className="space-y-2">
+//                   <Label htmlFor="phone" className="text-slate-300">Phone Number</Label>
+//                   <Input
+//                     id="phone"
+//                     value={profileData.phoneNumber}
+//                     onChange={(e) => setProfileData(prev => ({ ...prev, phoneNumber: e.target.value }))}
+//                     className="bg-slate-800/50 border-slate-600 text-white"
+//                   />
+//                 </div>
+//               </CardContent>
+//             </Card>
+
+//             <Card className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 border border-white/10 backdrop-blur-xl">
+//               <CardHeader>
+//                 <CardTitle className="text-white flex items-center">
+//                   <Key className="w-5 h-5 mr-2" />
+//                   Password & Security
+//                 </CardTitle>
+//               </CardHeader>
+//               <CardContent className="space-y-4">
+//                 <div className="space-y-2">
+//                   <Label htmlFor="currentPassword" className="text-slate-300">Current Password</Label>
+//                   <div className="relative">
+//                     <Input
+//                       id="currentPassword"
+//                       type={showPassword ? "text" : "password"}
+//                       placeholder="Enter current password"
+//                       className="bg-slate-800/50 border-slate-600 text-white pr-10"
+//                     />
+//                     <Button
+//                       type="button"
+//                       variant="ghost"
+//                       size="sm"
+//                       className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
+//                       onClick={() => setShowPassword(!showPassword)}
+//                     >
+//                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+//                     </Button>
+//                   </div>
+//                 </div>
+//                 <div className="space-y-2">
+//                   <Label htmlFor="newPassword" className="text-slate-300">New Password</Label>
+//                   <Input
+//                     id="newPassword"
+//                     type="password"
+//                     placeholder="Enter new password"
+//                     className="bg-slate-800/50 border-slate-600 text-white"
+//                   />
+//                 </div>
+//                 <div className="space-y-2">
+//                   <Label htmlFor="confirmPassword" className="text-slate-300">Confirm New Password</Label>
+//                   <Input
+//                     id="confirmPassword"
+//                     type="password"
+//                     placeholder="Confirm new password"
+//                     className="bg-slate-800/50 border-slate-600 text-white"
+//                   />
+//                 </div>
+//                 <Button variant="outline">
+//                   Update Password
+//                 </Button>
+//               </CardContent>
+//             </Card>
+
+//             <Card className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 border border-white/10 backdrop-blur-xl">
+//               <CardHeader>
+//                 <CardTitle className="text-white flex items-center">
+//                   <Bell className="w-5 h-5 mr-2" />
+//                   Notification Preferences
+//                 </CardTitle>
+//               </CardHeader>
+//               <CardContent className="space-y-4">
+//                 <div className="flex items-center justify-between">
+//                   <div>
+//                     <p className="text-white font-medium">Email Notifications</p>
+//                     <p className="text-sm text-slate-400">Receive updates via email</p>
+//                   </div>
+//                   <Switch
+//                     checked={securitySettings.emailNotifications}
+//                     onCheckedChange={(checked) => setSecuritySettings(prev => ({ ...prev, emailNotifications: checked }))}
+//                   />
+//                 </div>
+//                 <div className="flex items-center justify-between">
+//                   <div>
+//                     <p className="text-white font-medium">SMS Notifications</p>
+//                     <p className="text-sm text-slate-400">Receive alerts via SMS</p>
+//                   </div>
+//                   <Switch
+//                     checked={securitySettings.smsNotifications}
+//                     onCheckedChange={(checked) => setSecuritySettings(prev => ({ ...prev, smsNotifications: checked }))}
+//                   />
+//                 </div>
+//                 <div className="flex items-center justify-between">
+//                   <div>
+//                     <p className="text-white font-medium">Login Alerts</p>
+//                     <p className="text-sm text-slate-400">Get notified of new logins</p>
+//                   </div>
+//                   <Switch
+//                     checked={securitySettings.loginAlerts}
+//                     onCheckedChange={(checked) => setSecuritySettings(prev => ({ ...prev, loginAlerts: checked }))}
+//                   />
+//                 </div>
+//               </CardContent>
+//             </Card>
+//           </TabsContent>
+
+//           {/* Security Settings */}
+//           <TabsContent value="security" className="space-y-6">
+//             <Card className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 border border-white/10 backdrop-blur-xl">
+//               <CardHeader>
+//                 <CardTitle className="text-white flex items-center">
+//                   <Shield className="w-5 h-5 mr-2" />
+//                   Two-Factor Authentication
+//                 </CardTitle>
+//               </CardHeader>
+//               <CardContent className="space-y-4">
+//                 <div className="flex items-center justify-between">
+//                   <div>
+//                     <p className="text-white font-medium">Enable 2FA</p>
+//                     <p className="text-sm text-slate-400">Add an extra layer of security</p>
+//                   </div>
+//                   <div className="flex items-center space-x-2">
+//                     {securitySettings.mfaEnabled && (
+//                       <Badge className="bg-emerald-500/20 text-emerald-400">Enabled</Badge>
+//                     )}
+//                     <Switch
+//                       checked={securitySettings.mfaEnabled}
+//                       onCheckedChange={(checked) => setSecuritySettings(prev => ({ ...prev, mfaEnabled: checked }))}
+//                     />
+//                   </div>
+//                 </div>
+//                 {securitySettings.mfaEnabled && (
+//                   <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-600">
+//                     <p className="text-sm text-slate-300 mb-3">Choose your 2FA method:</p>
+//                     <div className="space-y-2">
+//                       <Button variant="outline" className="w-full justify-start">
+//                         <Smartphone className="w-4 h-4 mr-2" />
+//                         SMS Authentication
+//                       </Button>
+//                       <Button variant="outline" className="w-full justify-start">
+//                         <Mail className="w-4 h-4 mr-2" />
+//                         Email Authentication
+//                       </Button>
+//                     </div>
+//                   </div>
+//                 )}
+//               </CardContent>
+//             </Card>
+
+//             <Card className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 border border-white/10 backdrop-blur-xl">
+//               <CardHeader>
+//                 <CardTitle className="text-white flex items-center">
+//                   <Key className="w-5 h-5 mr-2" />
+//                   API Access
+//                 </CardTitle>
+//               </CardHeader>
+//               <CardContent className="space-y-4">
+//                 <div className="flex items-center justify-between">
+//                   <div>
+//                     <p className="text-white font-medium">API Access</p>
+//                     <p className="text-sm text-slate-400">Enable programmatic access</p>
+//                   </div>
+//                   <Switch
+//                     checked={securitySettings.apiAccess}
+//                     onCheckedChange={(checked) => setSecuritySettings(prev => ({ ...prev, apiAccess: checked }))}
+//                   />
+//                 </div>
+//                 {securitySettings.apiAccess && (
+//                   <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-600">
+//                     <p className="text-sm text-slate-300 mb-3">API Key:</p>
+//                     <div className="flex items-center space-x-2">
+//                       <Input
+//                         value="mt_••••••••••••••••••••••••••••••••"
+//                         readOnly
+//                         className="bg-slate-700/50 border-slate-600 text-slate-300"
+//                       />
+//                       <Button variant="outline" size="sm">
+//                         Regenerate
+//                       </Button>
+//                     </div>
+//                   </div>
+//                 )}
+//               </CardContent>
+//             </Card>
+//           </TabsContent>
+
+//           {/* Business Settings */}
+//           <TabsContent value="business" className="space-y-6">
+//             <Card className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 border border-white/10 backdrop-blur-xl">
+//               <CardHeader>
+//                 <CardTitle className="text-white flex items-center">
+//                   <Building className="w-5 h-5 mr-2" />
+//                   Business Information
+//                 </CardTitle>
+//               </CardHeader>
+//               <CardContent className="space-y-4">
+//                 <div className="space-y-2">
+//                   <Label htmlFor="companyName" className="text-slate-300">Company Name</Label>
+//                   <Input
+//                     id="companyName"
+//                     value={businessSettings.companyName}
+//                     onChange={(e) => setBusinessSettings(prev => ({ ...prev, companyName: e.target.value }))}
+//                     className="bg-slate-800/50 border-slate-600 text-white"
+//                   />
+//                 </div>
+//                 <div className="grid grid-cols-2 gap-4">
+//                   <div className="space-y-2">
+//                     <Label htmlFor="industry" className="text-slate-300">Industry</Label>
+//                     <Input
+//                       id="industry"
+//                       value={businessSettings.industry}
+//                       onChange={(e) => setBusinessSettings(prev => ({ ...prev, industry: e.target.value }))}
+//                       className="bg-slate-800/50 border-slate-600 text-white"
+//                     />
+//                   </div>
+//                   <div className="space-y-2">
+//                     <Label htmlFor="teamSize" className="text-slate-300">Team Size</Label>
+//                     <Input
+//                       id="teamSize"
+//                       value={businessSettings.teamSize}
+//                       onChange={(e) => setBusinessSettings(prev => ({ ...prev, teamSize: e.target.value }))}
+//                       className="bg-slate-800/50 border-slate-600 text-white"
+//                     />
+//                   </div>
+//                 </div>
+//               </CardContent>
+//             </Card>
+
+//             <Card className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 border border-white/10 backdrop-blur-xl">
+//               <CardHeader>
+//                 <CardTitle className="text-white flex items-center">
+//                   <Crown className="w-5 h-5 mr-2" />
+//                   Subscription & Billing
+//                 </CardTitle>
+//               </CardHeader>
+//               <CardContent className="space-y-4">
+//                 <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
+//                   <div>
+//                     <p className="text-white font-medium">{businessSettings.plan}</p>
+//                     <p className="text-sm text-slate-400">$99/month • 50 agents included</p>
+//                   </div>
+//                   <Badge className="bg-blue-500/20 text-blue-400">Active</Badge>
+//                 </div>
+//                 <div className="space-y-2">
+//                   <Label htmlFor="billingEmail" className="text-slate-300">Billing Email</Label>
+//                   <Input
+//                     id="billingEmail"
+//                     type="email"
+//                     value={businessSettings.billingEmail}
+//                     onChange={(e) => setBusinessSettings(prev => ({ ...prev, billingEmail: e.target.value }))}
+//                     className="bg-slate-800/50 border-slate-600 text-white"
+//                   />
+//                 </div>
+//                 <div className="flex space-x-3">
+//                   <Button variant="outline">
+//                     <CreditCard className="w-4 h-4 mr-2" />
+//                     Update Payment Method
+//                   </Button>
+//                   <Button variant="outline">
+//                     View Billing History
+//                   </Button>
+//                 </div>
+//               </CardContent>
+//             </Card>
+
+//             <Card className="bg-gradient-to-br from-red-900/20 to-red-800/20 border border-red-500/30 backdrop-blur-xl">
+//               <CardHeader>
+//                 <CardTitle className="text-red-400 flex items-center">
+//                   <Trash2 className="w-5 h-5 mr-2" />
+//                   Danger Zone
+//                 </CardTitle>
+//               </CardHeader>
+//               <CardContent className="space-y-4">
+//                 <div>
+//                   <p className="text-white font-medium mb-2">Delete Business Account</p>
+//                   <p className="text-sm text-slate-400 mb-4">
+//                     This will permanently delete your business account and all associated data. This action cannot be undone.
+//                   </p>
+//                   <Button variant="destructive">
+//                     <Trash2 className="w-4 h-4 mr-2" />
+//                     Delete Account
+//                   </Button>
+//                 </div>
+//               </CardContent>
+//             </Card>
+//           </TabsContent>
+//         </Tabs>
+//       </div>
+//     </div>
+//   );
+// }

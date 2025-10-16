@@ -4,61 +4,42 @@ import PocketBase from 'pocketbase';
 export interface AuthData {
   user: {
     id: string;
-    username: string;
+    username?: string;
     email: string;
-    name: string;
+    name?: string;
     stripeCustomerId?: string;
     stripeSubscriptionId?: string;
     created: string;
   };
-  subscription?: {
-    id: string;
-    plan: string;
-    status: string;
-    currentPeriodEnd: string;
-    amount: number;
-    trialEnd?: string;
-  };
+  subscription?: SubscriptionData;
+  token: string;
 }
 
-// Helper function to get user with subscription data
-async function getUserWithSubscription(pb: PocketBaseClient, userId: string): Promise<AuthData | null> {
-  try {
-    // Get user data
-    const user = await pb.collection('users').getOne(userId);
-    
-    // Get subscription if exists
-    let subscription = null;
-    try {
-      const subscriptions = await pb.collection('subscriptions').getList(1, 1, {
-        filter: `userId = "${userId}"`,
-        sort: '-created'
-      });
-      if (subscriptions.items.length > 0) {
-        subscription = subscriptions.items[0];
-      }
-    } catch (error) {
-      // No subscription found, that's okay
+export class PocketBaseClient {
+  private pb: PocketBase;
+  private authData: AuthData | null = null;
+
+  constructor(baseUrl: string = 'https://pb.levelingupdata.com/') {
+    this.pb = new PocketBase(baseUrl);
+
+    if (typeof window !== 'undefined') {
+      this.restoreSession();
     }
+  }
+
+  get isValid() {
+    return this.pb.authStore.isValid;
+  }
 
     return {
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        name: user.name,
-        stripeCustomerId: user.stripeCustomerId,
-        stripeSubscriptionId: user.stripeSubscriptionId,
-        created: user.created
+      model: this.authData?.user || null,
+      isValid: this.isValid,
+      token: this.authData?.token || null,
+      clear: () => {
+        this.authData = null;
+        this.pb.authStore.clear();
+        localStorage.removeItem('auth');
       },
-      subscription: subscription ? {
-        id: subscription.id,
-        plan: subscription.plan,
-        status: subscription.status,
-        currentPeriodEnd: subscription.currentPeriodEnd,
-        amount: subscription.amount,
-        trialEnd: subscription.trialEnd
-      } : undefined
     };
   } catch (error) {
     console.error('Error fetching user with subscription:', error);
@@ -66,75 +47,110 @@ async function getUserWithSubscription(pb: PocketBaseClient, userId: string): Pr
   }
 }
 
-// Extend PocketBase with custom methods for compatibility
-export class PocketBaseClient extends PocketBase {
+  /** Login with email & password */
   async authWithPassword(email: string, password: string): Promise<AuthData> {
     try {
-      const authData = await this.collection('users').authWithPassword(email, password);
-      const userWithSubscription = await getUserWithSubscription(this, authData.record.id);
-      
-      if (!userWithSubscription) {
-        throw new Error('Failed to fetch user data');
+      const record = await this.pb.collection('users').authWithPassword(email, password);
+
+      // Check verification status before proceeding
+      if (!record?.record?.verified) {
+        // Clear auth immediately so token doesn't persist
+        this.pb.authStore.clear();
+        throw new Error('Please verify your email before logging in.');
       }
-      
-      return userWithSubscription;
-    } catch (error) {
+
+      this.authData = this.mapAuthData(record);
+      localStorage.setItem('auth', JSON.stringify(this.authData));
+      return this.authData;
+    } catch (error: any) {
+      if (error.message === 'Please verify your email before logging in.') {
+        throw error;
+      }
       throw new Error('Authentication failed');
     }
   }
 
-  async create(email: string, password: string, username: string, name: string): Promise<AuthData['user']> {
+
+  /** Create/register a new user */
+  async create(
+    email: string,
+    password: string,
+    passwordConfirm: string,
+    username?: string,
+    name?: string
+  ): Promise<AuthData['user']> {
     try {
-      const userData = await this.collection('users').create({
-        email,
-        password,
-        passwordConfirm: password,
-        username,
-        name
-      });
-      
-      return {
-        id: userData.id,
-        username: userData.username,
-        email: userData.email,
-        name: userData.name,
-        stripeCustomerId: userData.stripeCustomerId,
-        stripeSubscriptionId: userData.stripeSubscriptionId,
-        created: userData.created
-      };
+      const data: any = { email, password, passwordConfirm };
+      if (username) data.username = username;
+      if (name) data.name = name;
+
+      const record = await this.pb.collection('users').create(data);
+      await this.pb.collection('users').requestVerification(email);
+
+      return this.mapUser(record);
     } catch (error) {
       throw new Error('Registration failed');
     }
   }
 
-  async refresh(): Promise<AuthData | null> {
+  /** Restore session and refresh subscription info */
+  async restoreSession(): Promise<AuthData | null> {
     try {
-      // Try to refresh the auth token
-      if (this.authStore.isValid) {
-        await this.collection('users').authRefresh();
-        const userWithSubscription = await getUserWithSubscription(this, this.authStore.model?.id || '');
-        return userWithSubscription;
-      }
-    } catch (error) {
-      // Clear invalid auth
+      const stored = localStorage.getItem('auth');
+      if (!stored) return null;
+
+      const authData: AuthData = JSON.parse(stored);
+      this.pb.authStore.loadFromCookie(authData.token); // Load token
+      await this.pb.authRefresh(); // Refresh token if expired
+
+      // Fetch fresh user data including subscription
+      const freshUser = await this.pb.collection('users').getOne(authData.user.id);
+      this.authData = this.mapAuthData({ record: freshUser, token: this.pb.authStore.token });
+      localStorage.setItem('auth', JSON.stringify(this.authData));
+
+      return this.authData;
+    } catch (_) {
       this.authStore.clear();
+      return null;
     }
-    return null;
   }
 
+  /** Request password reset email */
+  async requestPasswordReset(email: string): Promise<void> {
+    try {
+      await this.pb.collection('users').requestPasswordReset(email);
+    } catch (error) {
+      throw new Error('Failed to send password reset email');
+    }
+  }
+
+  /** Logout */
   logout() {
     this.authStore.clear();
   }
 
-  get isValid() {
-    return this.authStore.isValid;
+  /** Helper: map PocketBase record to AuthData */
+  private mapAuthData(record: any): AuthData {
+    return {
+      user: this.mapUser(record.record),
+      subscription: record.record.subscription || undefined,
+      token: record.token,
+    };
+  }
+
+  /** Helper: map PocketBase record to user object */
+  private mapUser(record: any) {
+    return {
+      id: record.id,
+      username: record.username,
+      email: record.email,
+      name: record.name,
+      createdAt: record.created,
+      stripeCustomerId: record.stripeCustomerId,
+      stripeSubscriptionId: record.stripeSubscriptionId,
+    };
   }
 }
 
-// Create instance
-export const pb = new PocketBaseClient(import.meta.env.VITE_POCKETBASE_URL || 'https://pb.levelingupdata.com');
-
-// Initialize auth from stored token
-if (typeof window !== 'undefined') {
-  pb.refresh();
-}
+// Export singleton
+export const pb = new PocketBaseClient();

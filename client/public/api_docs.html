@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>API Documentation</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      height: 100vh;
+      background-color: #f0f4f8;
+      color: #333;
+    }
+    /* Sidebar */
+    .sidebar {
+      width: 250px;
+      background: #e2e8f0;
+      padding: 20px;
+      border-right: 1px solid #cbd5e0;
+      overflow-y: auto;
+    }
+    .sidebar h2 {
+      font-size: 16px;
+      text-transform: uppercase;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      color: #4a5568;
+    }
+    .sidebar a {
+      display: block;
+      padding: 8px 12px;
+      color: #2d3748;
+      text-decoration: none;
+      border-radius: 6px;
+      margin-bottom: 5px;
+      transition: background-color 0.2s ease;
+    }
+    .sidebar a:hover {
+      background-color: #d1d5db;
+    }
+    /* Main content */
+    .content {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+    }
+    h1 {
+      color: #2d3748;
+      margin-bottom: 30px;
+    }
+    h2 {
+      margin-top: 50px;
+      color: #2d3748;
+    }
+    .section {
+      margin-bottom: 40px;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .method {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: bold;
+      color: white;
+      margin-right: 10px;
+    }
+    .GET { background: #38a169; }
+    .POST { background: #3182ce; }
+    pre {
+      background: #edf2f7;
+      color: #2d3748;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 14px;
+    }
+    code {
+      background: #e2e8f0;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    /* Hidden by default, shown when targeted */
+    .section {
+      display: none;
+    }
+    .section:target {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>PDF Processing</h2>
+    <a href="#pdf">Extract PDF</a>
+    <a href="#check-pdf">Check PDF</a>
+    <a href="#ask-pdf">Ask PDF</a>
+    <h2>Verification</h2>
+    <a href="#message-verify">Message Verify</a>
+    <a href="#form-verify">Form Verify</a>
+    <h2>System</h2>
+    <a href="#health">Health</a>
+  </div>
+
+  <div class="content">
+    <h1>API Documentation</h1>
+
+    <!-- PDF Section -->
+    <h2>PDF Processing</h2>
+    <p>
+      Endpoints for uploading and analyzing PDF/DOCX files.  
+      Supports text extraction, encryption checks, OCR processing, and asking natural language questions about the content.
+    </p>
+
+    <div id="pdf" class="section">
+      <span class="method POST">POST</span> <code>/pdf</code>
+      <p><b>Extract PDF:</b> Upload a PDF/DOCX file and extract its text or images.  
+      Automatically applies OCR if the document is scanned or encrypted.</p>
+      <h3>Example</h3>
+      <pre>
+curl -X POST "http://localhost:8000/pdf" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "file=@example.pdf" \
+  -F "dpi=150" \
+  -F "extract_images=true"
+      </pre>
+      <h3>Response</h3>
+      <pre>{
+  "status": "success",
+  "text": "Extracted text content ...",
+  "results": null,
+  "message": null
+}</pre>
+    </div>
+
+    <div id="check-pdf" class="section">
+      <span class="method POST">POST</span> <code>/check-pdf</code>
+      <p><b>Check PDF:</b> Quickly determine if a PDF is encrypted, requires OCR,  
+      and get a sample of extracted text for verification.</p>
+      <h3>Example</h3>
+      <pre>
+curl -X POST "http://localhost:8000/check-pdf" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "file=@example.pdf"
+      </pre>
+      <h3>Response</h3>
+      <pre>{
+  "isEncrypted": false,
+  "requiresPDFProcessing": false,
+  "sampleText": "Hello World..."
+}</pre>
+    </div>
+
+    <div id="ask-pdf" class="section">
+      <span class="method POST">POST</span> <code>/ask-pdf</code>
+      <p><b>Ask PDF:</b> Send natural language queries to extract semantic answers from the document.  
+      Useful for summaries, Q&A, and searching within content.</p>
+      <h3>Example</h3>
+      <pre>
+curl -X POST "http://localhost:8000/ask-pdf" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "file=@example.pdf" \
+  -F "question=What is the summary of this pdf?"
+      </pre>
+      <h3>Response</h3>
+      <pre>{
+  "status": "success",
+  "summary": "This is a summary of the PDF content..."
+}</pre>    
+    </div>
+
+    
+
+    <div id="message-verify" class="section">
+      <span class="method POST">POST</span> <code>/message-verify</code>
+      <p><b>Message Verify:</b> Ensures requests truly originate from Slack by validating signatures and timestamps.</p>
+      <h3>Example</h3>
+      <pre>
+curl -X POST "http://localhost:8000/message-verify" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello from Slack!", "timestamp": "2024-06-01T12:00:00Z"}'
+      </pre>
+      <h3>Response</h3>
+      <pre>{
+  "status": "verified",
+  "message": "Request is authentic."
+}</pre>
+    </div>
+
+    <div id="form-verify" class="section">
+      <span class="method POST">POST</span> <code>/form-verify</code>
+      <p><b>Form Verify:</b> Confirms that form submissions are genuine before they’re stored or processed.  
+      Prevents malicious or fake inputs.</p>
+      <h3>Example</h3>
+      <pre>
+curl -X POST "http://localhost:8000/form-verify" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"form_data": {"name": "John Doe", "email": "john@example.com"}, "timestamp": "2024-06-01T12:00:00Z"}'
+      </pre>
+      <h3>Response</h3>
+      <pre>{
+  "status": "verified",
+  "message": "Form submission is authentic."
+}</pre>
+    </div>
+
+    
+
+    <div id="health" class="section">
+      <span class="method GET">GET</span> <code>/health</code>
+      <p><b>Health Check:</b> Returns a simple JSON confirming the API is online and healthy.</p>
+      <h3>Example</h3>
+      <pre>curl http://localhost:8000/health</pre>
+      <h3>Response</h3>
+      <pre>{ "status": "ok" }</pre>
+    </div>
+
+  </div>
+</body>
+</html>

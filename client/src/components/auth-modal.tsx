@@ -36,92 +36,153 @@ export function AuthModal({
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const [formData, setFormData] = useState({
-    name: "",
-    username: "",
-    email: "",
-    password: "",
-    terms: false,
+    name: '',
+    username: '',
+    email: '',
+    password: '',
+    passwordConfirm: '',
+    terms: false
   });
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.terms) {
+const handleSignUp = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!formData.terms) {
+    toast({
+      title: "Terms Required",
+      description: "Please agree to the Terms of Service and Privacy Policy",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const username = formData.username || formData.email.split('@')[0];
+    if (formData.password !== formData.passwordConfirm) {
       toast({
-        title: "Terms Required",
-        description: "Please agree to the Terms of Service and Privacy Policy",
-        variant: "destructive",
+        title: 'Password Mismatch',
+        description: 'Password and confirmation do not match.',
+        variant: 'destructive',
       });
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    try {
-      const username = formData.username || formData.email.split("@")[0];
-      await signUp(formData.name, formData.email, formData.password, username);
+    // Create new user and send verification email
+    await pb.create(
+      formData.email,
+      formData.password,
+      formData.passwordConfirm,
+      username,
+      formData.name
+    );
 
-      toast({
-        title: "Welcome to SaaSFlow!",
-        description: "Your account has been created successfully.",
-      });
+    // Show verification message (no auto-login)
+    toast({
+      title: "Verify Your Email",
+      description:
+        "A verification link has been sent to your email. Please verify your account before signing in.",
+    });
 
-      onClose();
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        setLocation("/pricing");
-      }
-    } catch (error: any) {
-      toast({
-        title: "Registration Failed",
-        description:
-          error.message || "Please check your information and try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    resetForm();
+    onModeChange('signin'); // Switch to sign-in screen automatically
+  } catch (error: any) {
+    toast({
+      title: "Registration Failed",
+      description: error.message || "Please check your information and try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      await signIn(formData.email, formData.password);
+  try {
+    const authData = await pb.authWithPassword(formData.email, formData.password);
 
+    // Check if user is verified
+    const userRecord = authData.user;
+    if (!userRecord || (userRecord as any).verified === false) {
+      pb.logout();
       toast({
-        title: "Welcome back!",
-        description: "You have been signed in successfully.",
-      });
-
-      onClose();
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        setLocation("/dashboard");
-      }
-    } catch (error: any) {
-      toast({
-        title: "Sign In Failed",
-        description: "Invalid email or password. Please try again.",
+        title: "Email Not Verified",
+        description: "Please verify your email address before logging in.",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
+      return;
     }
-  };
+
+    toast({
+      title: "Welcome!",
+      description: "You have been signed in successfully.",
+    });
+
+    onClose();
+    if (onSuccess) onSuccess();
+    else setLocation('/dashboard');
+  } catch (error: any) {
+    const msg = error.message || "Invalid email or password. Please try again.";
+    toast({
+      // title: "Sign In Failed",
+      title: msg.includes("verify") ? "Email Not Verified" : "Sign In Failed",
+      // description: "Invalid email or password. Please try again.",
+      description: msg,
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+/********************************************************* */
+
+const handleForgotPassword = async () => {
+  if (!formData.email) {
+    toast({
+      title: "Email Required",
+      description: "Please enter your email address to reset your password.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  setLoading(true);
+  try {
+    await pb.requestPasswordReset(formData.email);
+    toast({
+      title: "Password Reset Email Sent",
+      description:
+        "If an account exists with that email, you will receive a password reset link shortly.",
+    });
+  } catch (error: any) {
+    toast({
+      title: "Reset Failed",
+      description: error.message || "Unable to send password reset email.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const resetForm = () => {
     setFormData({
-      name: "",
-      username: "",
-      email: "",
-      password: "",
-      terms: false,
+      name: '',
+      username: '',
+      email: '',
+      password: '',
+      passwordConfirm: '',
+      terms: false
     });
   };
 
@@ -196,14 +257,35 @@ export function AuthModal({
             )}
             {mode === "signin" && (
               <div className="text-right">
-                <a href="#" className="text-sm text-primary hover:underline">
-                  Forgot password?
-                </a>
+              <button
+                type="button"
+                onClick={() => handleForgotPassword()}
+                className="text-sm text-primary hover:underline"
+              >
+                Forgot password?
+              </button>
+
               </div>
             )}
           </div>
 
-          {mode === "signup" && (
+          {mode === 'signup' && (
+            <div className="space-y-2">
+              <Label htmlFor="passwordConfirm">Confirm Password</Label>
+              <Input
+                id="passwordConfirm"
+                type="password"
+                placeholder="••••••••"
+                value={formData.passwordConfirm}
+                onChange={(e) => handleInputChange('passwordConfirm', e.target.value)}
+                required
+                minLength={8}
+                data-testid="input-password-confirm"
+              />
+            </div>
+          )}
+
+          {mode === 'signup' && (
             <div className="flex items-start space-x-2">
               <Checkbox
                 id="terms"
