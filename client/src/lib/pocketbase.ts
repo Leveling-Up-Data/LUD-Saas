@@ -78,13 +78,13 @@ async function getUserWithSubscription(
       },
       subscription: subscription
         ? {
-            id: subscription.id,
-            plan: subscription.plan,
-            status: subscription.status,
-            currentPeriodEnd: subscription.currentPeriodEnd,
-            amount: subscription.amount,
-            trialEnd: subscription.trialEnd,
-          }
+          id: subscription.id,
+          plan: subscription.plan,
+          status: subscription.status,
+          currentPeriodEnd: subscription.currentPeriodEnd,
+          amount: subscription.amount,
+          trialEnd: subscription.trialEnd,
+        }
         : undefined,
     };
   } catch (error) {
@@ -304,13 +304,15 @@ export const pb = new PocketBaseClient(
 // Initialize auth from stored token
 if (typeof window !== "undefined") {
   pb.refresh();
-// 1) Load auth from cookie first (more resilient than localStorage-only)
-try {
-  if (typeof document !== 'undefined') {
-    pb.authStore.loadFromCookie(document.cookie);
+  // 1) Load auth from cookie first (more resilient than localStorage-only)
+  try {
+    if (typeof document !== 'undefined') {
+      pb.authStore.loadFromCookie(document.cookie);
+    }
+  } catch (_) {
+    // ignore malformed cookie
   }
-} catch (_) {
-  // ignore malformed cookie
+
 }
 
 function syncAuthCookie() {
