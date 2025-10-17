@@ -46,7 +46,7 @@ async function getUserWithSubscription(pb: PocketBaseClient, userId: string): Pr
   try {
     // Get user data
     const user = await pb.collection('users').getOne(userId);
-    
+
     // Get subscription if exists
     let subscription = null;
     try {
@@ -92,6 +92,7 @@ export class PocketBaseClient extends PocketBase {
     try {
       const authData = await this.collection('users').authWithPassword(email, password);
       const userWithSubscription = await getUserWithSubscription(this, authData.record.id);
+
       // Ensure the user has at least one API token record
       try {
         await this.ensureUserTokenForUser(authData.record.id);
@@ -102,7 +103,7 @@ export class PocketBaseClient extends PocketBase {
       if (!userWithSubscription) {
         throw new Error('Failed to fetch user data');
       }
-      
+
       return userWithSubscription;
     } catch (error) {
       throw new Error('Authentication failed');
@@ -119,6 +120,7 @@ export class PocketBaseClient extends PocketBase {
         username,
         name
       });
+
       // Ensure the new user has a default API token record
       try {
         await this.ensureUserTokenForUser(userData.id);
@@ -232,7 +234,39 @@ export class PocketBaseClient extends PocketBase {
 // Create instance
 export const pb = new PocketBaseClient(import.meta.env.VITE_POCKETBASE_URL || 'https://pb.levelingupdata.com');
 
-// Initialize auth from stored token
+// 1) Load auth from cookie first (more resilient than localStorage-only)
+try {
+  if (typeof document !== 'undefined') {
+    pb.authStore.loadFromCookie(document.cookie);
+  }
+} catch (_) {
+  // ignore malformed cookie
+}
+
+function syncAuthCookie() {
+  if (typeof document === 'undefined') return;
+  const cookie = pb.authStore.exportToCookie({
+    httpOnly: false,
+    secure: typeof location !== 'undefined' && location.protocol === 'https:',
+    sameSite: 'Lax',
+    path: '/',
+  });
+  document.cookie = cookie;
+}
+
+// 2) Try to refresh on boot; regardless of outcome, sync cookie to reflect final state
 if (typeof window !== 'undefined') {
-  pb.refresh();
+  pb.refresh().finally(() => {
+    syncAuthCookie();
+  });
+}
+
+export function persistAuthToCookie() {
+  syncAuthCookie();
+}
+
+export function clearAuthCookie() {
+  if (typeof document !== 'undefined') {
+    document.cookie = 'pb_auth=; Path=/; Max-Age=0; SameSite=Lax';
+  }
 }
