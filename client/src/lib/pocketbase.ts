@@ -99,7 +99,7 @@ export class PocketBaseClient extends PocketBase {
       } catch (err) {
         console.warn('ensureUserTokenForUser failed (login):', err);
       }
-      
+
       if (!userWithSubscription) {
         throw new Error('Failed to fetch user data');
       }
@@ -127,7 +127,7 @@ export class PocketBaseClient extends PocketBase {
       } catch (err) {
         console.warn('ensureUserTokenForUser failed (register):', err);
       }
-      
+
       return {
         id: userData.id,
         username: userData.username,
