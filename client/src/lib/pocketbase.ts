@@ -78,13 +78,13 @@ async function getUserWithSubscription(
       },
       subscription: subscription
         ? {
-            id: subscription.id,
-            plan: subscription.plan,
-            status: subscription.status,
-            currentPeriodEnd: subscription.currentPeriodEnd,
-            amount: subscription.amount,
-            trialEnd: subscription.trialEnd,
-          }
+          id: subscription.id,
+          plan: subscription.plan,
+          status: subscription.status,
+          currentPeriodEnd: subscription.currentPeriodEnd,
+          amount: subscription.amount,
+          trialEnd: subscription.trialEnd,
+        }
         : undefined,
     };
   } catch (error) {
@@ -301,16 +301,13 @@ export const pb = new PocketBaseClient(
   import.meta.env.VITE_POCKETBASE_URL || "https://pb.levelingupdata.com"
 );
 
-// Initialize auth from stored token
-if (typeof window !== "undefined") {
-  pb.refresh();
-// 1) Load auth from cookie first (more resilient than localStorage-only)
-try {
-  if (typeof document !== 'undefined') {
+// Initialize auth from stored token (browser only)
+if (typeof document !== 'undefined') {
+  try {
     pb.authStore.loadFromCookie(document.cookie);
+  } catch (_) {
+    // ignore malformed cookie
   }
-} catch (_) {
-  // ignore malformed cookie
 }
 
 function syncAuthCookie() {
@@ -324,7 +321,7 @@ function syncAuthCookie() {
   document.cookie = cookie;
 }
 
-// 2) Try to refresh on boot; regardless of outcome, sync cookie to reflect final state
+// Try to refresh on boot; regardless of outcome, sync cookie to reflect final state (browser only)
 if (typeof window !== 'undefined') {
   pb.refresh().finally(() => {
     syncAuthCookie();
