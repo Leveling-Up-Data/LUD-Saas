@@ -43,5 +43,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Start the compiled server (serves API and frontend)
-CMD ["node", "dist/index.js"]
+# Start the simple server
+CMD ["node", "simple-server.js"]
