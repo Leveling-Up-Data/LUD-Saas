@@ -227,6 +227,8 @@ export default function Dashboard() {
     },
   ].filter(Boolean) as Array<{ icon: any; title: string; description: string; time?: string; color: string }>;
 
+  const hasActivities = activities.length > 0;
+
   const quickActions = [
     {
       icon: UserPlus,
@@ -507,53 +509,108 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Activity & Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {hasActivities ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Recent Activity */}
+            <div className="lg:col-span-2">
+              <Card className="shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-xl">Recent Activity</CardTitle>
+                  <CardDescription>
+                    Latest updates from your platform
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {activities.map((activity, index) => (
+                      <div
+                        key={index}
+                        className="flex items-start space-x-4 pb-4 border-b border-border last:border-0"
+                      >
+                        <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
+                          <activity.icon className={`h-5 w-5 ${activity.color}`} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-foreground font-medium">{activity.title}</p>
+                          <p className="text-sm text-muted-foreground">{activity.description}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-          {/* Recent Activity */}
-          <div className="lg:col-span-2">
+            {/* Right Column */}
+            <div className="space-y-6">
+              {/* Quick Actions */}
+              <Card className="shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-xl">Quick Actions</CardTitle>
+                  <CardDescription>Common tasks and settings</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {quickActions.map((action, index) => (
+                      <Button
+                        key={index}
+                        variant="ghost"
+                        className="w-full justify-between p-4 h-auto group hover:bg-muted"
+                        data-testid={`button-${action.title.toString().toLowerCase().replace(/ /g, "-")}`}
+                        onClick={(e) =>
+                          action.href && action.href !== "#"
+                            ? setLocation(action.href)
+                            : action.onClick?.(e)
+                        }
+                      >
+                        <div className="flex items-center space-x-3">
+                          {action.icon && (
+                            <action.icon className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
+                          )}
+                          <span className="font-medium">{action.title}</span>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition" />
+                      </Button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Support Card */}
+              <Card className="shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <LifeBuoy className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground mb-1">Need Help?</p>
+                      <p className="text-sm text-muted-foreground mb-3">Our support team is here for you 24/7</p>
+                      <Link to="/contact">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-primary hover:text-primary/90 p-0 h-auto font-medium"
+                          data-testid="button-contact-support"
+                        >
+                          Contact Support <ArrowRight className="ml-1 h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        ) : (
+          // Centered layout when there are no activities to display
+          <div className="max-w-xl mx-auto space-y-6">
+            {/* Quick Actions */}
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle className="text-xl">Recent Activity</CardTitle>
-                <CardDescription>
-                  Latest updates from your platform
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {activities.map((activity, index) => (
-                    <div
-                      key={index}
-                      className="flex items-start space-x-4 pb-4 border-b border-border last:border-0"
-                    >
-                      <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
-                        <activity.icon
-                          className={`h-5 w-5 ${activity.color}`}
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-foreground font-medium">
-                          {activity.title}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {activity.description}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {activity.time}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Quick Actions */}
-          <div>
-            <Card className="shadow-sm mb-6">
-              <CardHeader>
-                <CardTitle className="text-xl">Quick Actions</CardTitle>
-                <CardDescription>Common tasks and settings</CardDescription>
+                <CardTitle className="text-xl text-center">Quick Actions</CardTitle>
+                <CardDescription className="text-center">Common tasks and settings</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -562,10 +619,7 @@ export default function Dashboard() {
                       key={index}
                       variant="ghost"
                       className="w-full justify-between p-4 h-auto group hover:bg-muted"
-                      data-testid={`button-${action.title
-                        .toString()
-                        .toLowerCase()
-                        .replace(/ /g, "-")}`}
+                      data-testid={`button-${action.title.toString().toLowerCase().replace(/ /g, "-")}`}
                       onClick={(e) =>
                         action.href && action.href !== "#"
                           ? setLocation(action.href)
@@ -584,37 +638,33 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Support Card */}
-          <Card className="shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-start space-x-3">
-                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <LifeBuoy className="h-5 w-5 text-primary" />
+            {/* Centered Support Card */}
+            <Card className="shadow-sm">
+              <CardContent className="p-6 text-center">
+                <div className="flex items-start space-x-3 justify-center">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <LifeBuoy className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-medium text-foreground mb-1">Need Help?</p>
+                    <p className="text-sm text-muted-foreground mb-3">Our support team is here for you 24/7</p>
+                    <Link to="/contact">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-primary hover:text-primary/90 p-0 h-auto font-medium"
+                        data-testid="button-contact-support"
+                      >
+                        Contact Support <ArrowRight className="ml-1 h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-foreground mb-1">
-                    Need Help?
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Our support team is here for you 24/7
-                  </p>
-                  <Link to="/contact">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-primary hover:text-primary/90 p-0 h-auto font-medium"
-                      data-testid="button-contact-support"
-                    >
-                      Contact Support <ArrowRight className="ml-1 h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
 
       {/* Payment Method Section */}
