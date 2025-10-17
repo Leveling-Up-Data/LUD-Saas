@@ -67,7 +67,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const htmlBody = `
         <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height:1.6;">
           <h2>You're invited</h2>
-          <p>You have been invited by user <strong>${inviterId}</strong>.</p>
+          <p>You have been invited by user <strong>${email}</strong>.</p>
           <p>Click the button below to sign up or log in:</p>
           <p>
             <a href="${loginUrl}"
