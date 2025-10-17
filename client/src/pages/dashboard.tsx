@@ -15,18 +15,17 @@ import { ApiTokenDialog } from "@/components/api-token-dialog";
 import { Footer } from "@/components/footer";
 import { pb } from "@/lib/pocketbase";
 import { useToast } from "@/hooks/use-toast";
-import { getApiTokenById } from "@/config/api-tokens";
-import {
-  Users,
-  Database,
-  Zap,
-  TrendingUp,
-  ArrowUp,
-  Gift,
-  UserPlus,
-  CreditCard,
-  Rocket,
-  Shield,
+import { 
+  Users, 
+  Database, 
+  Zap, 
+  TrendingUp, 
+  ArrowUp, 
+  Gift, 
+  UserPlus, 
+  CreditCard, 
+  Rocket, 
+  Shield, 
   Bell,
   Settings,
   FileText,
@@ -37,59 +36,73 @@ import {
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
-  const [apiDialog, setApiDialog] = useState<{ open: boolean; token: string; tokenName: string }>({
-    open: false,
-    token: '',
-    tokenName: ''
-  });
+  const [apiDialog, setApiDialog] = useState(false);
   const { toast } = useToast();
 
   const { data: userData, isLoading } = useQuery({
     queryKey: ["user", pb.authStore.model?.id],
     enabled: pb.authStore.isValid,
     queryFn: async () => {
-      if (!pb.authStore.model?.id) return null;
-
-      // Get user data
-      const user = await pb.collection('users').getOne(pb.authStore.model.id);
-
-      // Get subscription if exists
-      let subscription = null;
       try {
-        const subscriptions = await pb
-          .collection("subscriptions")
-          .getList(1, 1, {
-            filter: `userId = "${pb.authStore.model.id}"`,
-            sort: "-created",
-          });
-        if (subscriptions.items.length > 0) {
-          subscription = subscriptions.items[0];
-        }
-      } catch (error) {
-        // No subscription found, that's okay
-      }
+        if (!pb.authStore.model?.id) return null;
 
-      return {
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          name: user.name,
-          stripeCustomerId: user.stripeCustomerId,
-          stripeSubscriptionId: user.stripeSubscriptionId,
-          created: user.created,
-        },
-        subscription: subscription
-          ? {
-            id: subscription.id,
-            plan: subscription.plan,
-            status: subscription.status,
-            currentPeriodEnd: subscription.currentPeriodEnd,
-            amount: subscription.amount,
-            trialEnd: subscription.trialEnd,
+        // Get user data
+        const user = await pb.collection('users').getOne(pb.authStore.model.id);
+
+        // Get subscription if exists
+        let subscription = null;
+        try {
+          const subscriptions = await pb
+            .collection("subscriptions")
+            .getList(1, 1, {
+              filter: `userId = "${pb.authStore.model.id}"`,
+              sort: "-created",
+            });
+          if (subscriptions.items.length > 0) {
+            subscription = subscriptions.items[0];
           }
-          : undefined,
-      };
+        } catch (error) {
+          // No subscription found, that's okay
+        }
+
+        // Get recently accepted invites (users who signed up with invitedBy = current user)
+        let acceptedInvites: Array<{ id: string; email: string; created: string; name?: string; username?: string }> = [];
+        try {
+          const invitedUsers = await pb.collection('users').getList(1, 5, {
+            filter: `invitedBy = "${pb.authStore.model.id}"`,
+            sort: '-created',
+          });
+          acceptedInvites = invitedUsers.items.map((u: any) => ({ id: u.id, email: u.email, created: u.created, name: u.name, username: u.username }));
+        } catch (error) {
+          // Ignore if no invited users or field doesn't exist
+        }
+
+        return {
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            name: user.name,
+            stripeCustomerId: user.stripeCustomerId,
+            stripeSubscriptionId: user.stripeSubscriptionId,
+            created: user.created,
+          },
+          subscription: subscription
+            ? {
+              id: subscription.id,
+              plan: subscription.plan,
+              status: subscription.status,
+              currentPeriodEnd: subscription.currentPeriodEnd,
+              amount: subscription.amount,
+              trialEnd: subscription.trialEnd,
+            }
+            : undefined,
+          acceptedInvites,
+        };
+      } catch (e) {
+        console.error('Dashboard data error:', e);
+        return null;
+      }
     },
   });
 
@@ -134,115 +147,98 @@ export default function Dashboard() {
 
   const user = (userData as any)?.user;
   const subscription = (userData as any)?.subscription;
+  const displayName = (user?.name && String(user.name).trim())
+    || (user?.username && String(user.username).trim())
+    || (user?.email ? String(user.email).split("@")[0] : "")
+    || "User";
 
-  // Mock data for demo
+  // Project metrics (simple illustrative stats)
   const stats = {
-    users: 2847,
-    storageUsed: 48,
-    apiRequests: 487000,
-    uptime: 99.9,
+    users: (userData as any)?.user ? 1 : 0,
+    storageUsed: 11, // % of quota used
+    apiRequests: 12500, // requests this month
+    uptime: 99.99,
   };
 
+  // Build recent activity. Pull last invite (if any) from localStorage
+  const lastInviteRaw = typeof window !== 'undefined' ? localStorage.getItem('lastInvite') : null;
+  let inviteActivity: { email?: string; time?: string } | null = null;
+  if (lastInviteRaw) {
+    try {
+      const parsed = JSON.parse(lastInviteRaw);
+      const at = parsed?.at ? new Date(parsed.at) : null;
+      const rel = at ? timeSince(at) : undefined;
+      inviteActivity = { email: parsed?.email, time: rel };
+    } catch (_) {
+      inviteActivity = null;
+    }
+  }
+
+  function timeSince(date: Date) {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    const intervals: [number, string][] = [
+      [60 * 60 * 24, 'day'],
+      [60 * 60, 'hour'],
+      [60, 'minute'],
+    ];
+    for (const [secs, label] of intervals) {
+      const v = Math.floor(seconds / secs);
+      if (v >= 1) return `${v} ${label}${v > 1 ? 's' : ''} ago`;
+    }
+    return `${seconds} sec${seconds !== 1 ? 's' : ''} ago`;
+  }
+
+  const accepted = (userData as any)?.acceptedInvites as Array<{ id: string; email: string; created: string; name?: string; username?: string }> | undefined;
+  const acceptedActivities = (accepted || []).map((u) => ({
+    icon: UserPlus,
+    title: 'Invite accepted',
+    description: u.email ? `New account: ${u.email}` : 'A user accepted your invite',
+    time: timeSince(new Date(u.created)),
+    color: 'text-primary',
+  }));
+
   const activities = [
-    {
+    inviteActivity && {
       icon: UserPlus,
-      title: "New user registered",
-      description: "sarah@example.com joined your platform",
-      time: "2 hours ago",
+      title: "Invite sent",
+      description: inviteActivity.email ? `Invitation sent to ${inviteActivity.email}` : "User invitation sent",
+      time: inviteActivity.time || "just now",
       color: "text-primary",
     },
-    {
+    ...acceptedActivities,
+    subscription?.status && {
       icon: CreditCard,
-      title: "Payment received",
-      description: "Monthly subscription renewed successfully",
-      time: "5 hours ago",
+      title: subscription?.status === 'trialing' ? 'Trial started' : 'Subscription active',
+      description: subscription?.plan ? `${subscription.plan} plan` : 'Subscription updated',
+      time: subscription?.currentPeriodEnd ? `${timeSince(new Date(subscription.currentPeriodEnd))}` : undefined,
       color: "text-secondary",
     },
     {
       icon: Rocket,
-      title: "New feature deployed",
-      description: "Advanced analytics dashboard is now live",
-      time: "1 day ago",
+      title: "Workspace created",
+      description: displayName ? `${displayName}'s workspace is ready` : 'Workspace initialized',
+      time: user?.created ? `${timeSince(new Date(user.created))}` : undefined,
       color: "text-accent",
     },
-    {
-      icon: Shield,
-      title: "Security update",
-      description: "Two-factor authentication enabled",
-      time: "3 days ago",
-      color: "text-chart-4",
-    },
-  ];
+  ].filter(Boolean) as Array<{ icon: any; title: string; description: string; time?: string; color: string }>;
 
   const quickActions = [
     {
       icon: UserPlus,
       title: "Invite Users",
-      href: "#",
+      href: "/invite",
       onClick: (e: React.MouseEvent) => {
         e.preventDefault();
-        // TODO: Implement invite users functionality
-        console.log('Invite Users clicked');
+        setLocation('/invite');
       }
     },
     {
       icon: Key,
-      title: (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            // Get the test API token from configuration
-            const apiToken = getApiTokenById('test-api-token');
-            if (apiToken) {
-              setApiDialog({
-                open: true,
-                token: apiToken.token,
-                tokenName: apiToken.name
-              });
-            } else {
-              setApiDialog({
-                open: true,
-                token: 'sk-test-1234-56789-abcdefghijklmnop',
-                tokenName: 'Test API Token'
-              });
-            }
-          }}
-          className="underline decoration-dotted text-left focus:outline-none"
-        >
-          API Keys
-        </button>
-      ),
+      title: "API Keys",
       href: "#",
       onClick: (e: React.MouseEvent) => {
         e.preventDefault();
-        // Get the test API token from configuration
-        const apiToken = getApiTokenById('test-api-token');
-
-        if (apiToken) {
-          setApiDialog({
-            open: true,
-            token: apiToken.token,
-            tokenName: apiToken.name
-          });
-        } else {
-          // Fallback if no token is configured
-          setApiDialog({
-            open: true,
-            token: 'sk-test-1234-56789-abcdefghijklmnop',
-            tokenName: 'Test API Token'
-          });
-        }
-      }
-    },
-    {
-      icon: FileText,
-      title: "Billing History",
-      href: "#",
-      onClick: (e: React.MouseEvent) => {
-        e.preventDefault();
-        // TODO: Implement billing history functionality
-        console.log('Billing History clicked');
+        setApiDialog(true);
       }
     },
     {
@@ -260,7 +256,7 @@ export default function Dashboard() {
   const trialDaysRemaining = subscription?.trialEnd
     ? Math.max(0, Math.ceil((new Date(subscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
-  
+
   const trialProgress = subscription?.trialEnd
     ? ((14 - trialDaysRemaining) / 14) * 100
     : 0;
@@ -284,28 +280,9 @@ export default function Dashboard() {
                   className="font-medium text-foreground"
                   data-testid="text-user-name"
                 >
-                  {user?.name || "User"}
+                  {displayName}
                 </span>
               </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-2"
-                data-testid="button-notifications"
-              >
-                <Bell className="h-4 w-4" />
-                <span className="hidden sm:inline">Notifications</span>
-              </Button>
-              <div className="flex items-center space-x-3">
-                <div
-                  className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold"
-                  data-testid="text-user-avatar"
-                >
-                  {user?.name?.charAt(0) || "U"}
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -502,7 +479,7 @@ export default function Dashboard() {
                 className="text-3xl font-bold text-foreground"
                 data-testid="text-stat-uptime"
               >
-                {stats.uptime}%
+                {stats.uptime.toFixed(2)}%
               </p>
             </CardContent>
           </Card>
@@ -564,15 +541,8 @@ export default function Dashboard() {
                       key={index}
                       variant="ghost"
                       className="w-full justify-between p-4 h-auto group hover:bg-muted"
-                      data-testid={`button-${action.title
-                        .toString()
-                        .toLowerCase()
-                        .replace(/ /g, "-")}`}
-                      onClick={(e) =>
-                        action.href && action.href !== "#"
-                          ? setLocation(action.href)
-                          : action.onClick?.(e)
-                      }
+                      data-testid={`button-${action.title.toString().toLowerCase().replace(' ', '-')}`}
+                      onClick={action.onClick}
                     >
                       <div className="flex items-center space-x-3">
                         {action.icon && (
@@ -666,10 +636,8 @@ export default function Dashboard() {
 
       {/* API Token Dialog */}
       <ApiTokenDialog
-        open={apiDialog.open}
-        onOpenChange={(open) => setApiDialog({ ...apiDialog, open })}
-        token={apiDialog.token}
-        tokenName={apiDialog.tokenName}
+        open={apiDialog}
+        onOpenChange={setApiDialog}
       />
     </div>
   );

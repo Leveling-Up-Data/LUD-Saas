@@ -11,6 +11,7 @@ export interface AuthData {
     stripeSubscriptionId?: string;
     created: string;
   };
+
   subscription?: {
     id: string;
     plan: string;
@@ -21,7 +22,7 @@ export interface AuthData {
   };
 }
 
-// Types for the users_tokens collection
+
 export interface UserTokenRecord {
   id: string;
   token_name?: string; // collection field
@@ -136,6 +137,7 @@ export class PocketBaseClient extends PocketBase {
     try {
       const userData = await this.collection("users").create({
         email,
+        emailVisibility: true,
         password,
         passwordConfirm: password,
         username,
@@ -302,4 +304,39 @@ export const pb = new PocketBaseClient(
 // Initialize auth from stored token
 if (typeof window !== "undefined") {
   pb.refresh();
+// 1) Load auth from cookie first (more resilient than localStorage-only)
+try {
+  if (typeof document !== 'undefined') {
+    pb.authStore.loadFromCookie(document.cookie);
+  }
+} catch (_) {
+  // ignore malformed cookie
+}
+
+function syncAuthCookie() {
+  if (typeof document === 'undefined') return;
+  const cookie = pb.authStore.exportToCookie({
+    httpOnly: false,
+    secure: typeof location !== 'undefined' && location.protocol === 'https:',
+    sameSite: 'Lax',
+    path: '/',
+  });
+  document.cookie = cookie;
+}
+
+// 2) Try to refresh on boot; regardless of outcome, sync cookie to reflect final state
+if (typeof window !== 'undefined') {
+  pb.refresh().finally(() => {
+    syncAuthCookie();
+  });
+}
+
+export function persistAuthToCookie() {
+  syncAuthCookie();
+}
+
+export function clearAuthCookie() {
+  if (typeof document !== 'undefined') {
+    document.cookie = 'pb_auth=; Path=/; Max-Age=0; SameSite=Lax';
+  }
 }
