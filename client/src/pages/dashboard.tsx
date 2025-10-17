@@ -37,6 +37,7 @@ import {
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
+  const [isAuthenticated, setIsAuthenticated] = useState(pb.authStore.isValid);
   const [apiDialog, setApiDialog] = useState<{ open: boolean; token: string; tokenName: string }>({
     open: false,
     token: '',
@@ -46,7 +47,7 @@ export default function Dashboard() {
 
   const { data: userData, isLoading } = useQuery({
     queryKey: ["user", pb.authStore.model?.id],
-    enabled: pb.authStore.isValid,
+    enabled: isAuthenticated,
     queryFn: async () => {
       try {
         if (!pb.authStore.model?.id) return null;
@@ -112,10 +113,13 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    if (!pb.authStore.isValid) {
-      setLocation("/");
-      return;
-    }
+    const unsubscribe = pb.authStore.onChange(() => {
+      const valid = pb.authStore.isValid;
+      setIsAuthenticated(valid);
+      if (!valid) setLocation("/");
+    });
+
+    if (!pb.authStore.isValid) setLocation("/");
 
     // Check for payment success
     const urlParams = new URLSearchParams(window.location.search);
@@ -127,9 +131,10 @@ export default function Dashboard() {
       // Clean up URL
       window.history.replaceState({}, "", "/dashboard");
     }
+    return unsubscribe;
   }, [setLocation, toast]);
 
-  if (!pb.authStore.isValid) {
+  if (!isAuthenticated) {
     return null;
   }
 

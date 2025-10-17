@@ -42,5 +42,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Start the simple server
-CMD ["node", "simple-server.js"]
+# Start the express server that serves Vite build and API
+CMD ["node", "server.js"]
