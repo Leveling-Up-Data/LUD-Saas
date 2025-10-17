@@ -77,6 +77,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await pb.authWithPassword(email, password);
         setUser(data.user);
         setSubscription(data.subscription);
+        // Capture inviterId from URL if present and persist on the new user
+        try {
+          if (typeof window !== 'undefined') {
+            const url = new URL(window.location.href);
+            const inviterId = url.searchParams.get('inviterId');
+            if (inviterId && data.user?.id) {
+              await pb.collection('users').update(data.user.id, { invitedBy: inviterId });
+            }
+          }
+        } catch (_) {
+          // Non-blocking: ignore if cannot persist invitedBy
+        }
         persistAuthToCookie();
       } finally {
         setLoading(false);

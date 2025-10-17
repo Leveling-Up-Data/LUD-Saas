@@ -48,48 +48,66 @@ export default function Dashboard() {
     queryKey: ["user", pb.authStore.model?.id],
     enabled: pb.authStore.isValid,
     queryFn: async () => {
-      if (!pb.authStore.model?.id) return null;
-
-      // Get user data
-      const user = await pb.collection('users').getOne(pb.authStore.model.id);
-
-      // Get subscription if exists
-      let subscription = null;
       try {
-        const subscriptions = await pb
-          .collection("subscriptions")
-          .getList(1, 1, {
-            filter: `userId = "${pb.authStore.model.id}"`,
-            sort: "-created",
-          });
-        if (subscriptions.items.length > 0) {
-          subscription = subscriptions.items[0];
-        }
-      } catch (error) {
-        // No subscription found, that's okay
-      }
+        if (!pb.authStore.model?.id) return null;
 
-      return {
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          name: user.name,
-          stripeCustomerId: user.stripeCustomerId,
-          stripeSubscriptionId: user.stripeSubscriptionId,
-          created: user.created,
-        },
-        subscription: subscription
-          ? {
-            id: subscription.id,
-            plan: subscription.plan,
-            status: subscription.status,
-            currentPeriodEnd: subscription.currentPeriodEnd,
-            amount: subscription.amount,
-            trialEnd: subscription.trialEnd,
+        // Get user data
+        const user = await pb.collection('users').getOne(pb.authStore.model.id);
+
+        // Get subscription if exists
+        let subscription = null;
+        try {
+          const subscriptions = await pb
+            .collection("subscriptions")
+            .getList(1, 1, {
+              filter: `userId = "${pb.authStore.model.id}"`,
+              sort: "-created",
+            });
+          if (subscriptions.items.length > 0) {
+            subscription = subscriptions.items[0];
           }
-          : undefined,
-      };
+        } catch (error) {
+          // No subscription found, that's okay
+        }
+
+        // Get recently accepted invites (users who signed up with invitedBy = current user)
+        let acceptedInvites: Array<{ id: string; email: string; created: string; name?: string; username?: string }> = [];
+        try {
+          const invitedUsers = await pb.collection('users').getList(1, 5, {
+            filter: `invitedBy = "${pb.authStore.model.id}"`,
+            sort: '-created',
+          });
+          acceptedInvites = invitedUsers.items.map((u: any) => ({ id: u.id, email: u.email, created: u.created, name: u.name, username: u.username }));
+        } catch (error) {
+          // Ignore if no invited users or field doesn't exist
+        }
+
+        return {
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            name: user.name,
+            stripeCustomerId: user.stripeCustomerId,
+            stripeSubscriptionId: user.stripeSubscriptionId,
+            created: user.created,
+          },
+          subscription: subscription
+            ? {
+              id: subscription.id,
+              plan: subscription.plan,
+              status: subscription.status,
+              currentPeriodEnd: subscription.currentPeriodEnd,
+              amount: subscription.amount,
+              trialEnd: subscription.trialEnd,
+            }
+            : undefined,
+          acceptedInvites,
+        };
+      } catch (e) {
+        console.error('Dashboard data error:', e);
+        return null;
+      }
     },
   });
 
@@ -175,6 +193,15 @@ export default function Dashboard() {
     return `${seconds} sec${seconds !== 1 ? 's' : ''} ago`;
   }
 
+  const accepted = (userData as any)?.acceptedInvites as Array<{ id: string; email: string; created: string; name?: string; username?: string }> | undefined;
+  const acceptedActivities = (accepted || []).map((u) => ({
+    icon: UserPlus,
+    title: 'Invite accepted',
+    description: u.email ? `New account: ${u.email}` : 'A user accepted your invite',
+    time: timeSince(new Date(u.created)),
+    color: 'text-primary',
+  }));
+
   const activities = [
     inviteActivity && {
       icon: UserPlus,
@@ -183,6 +210,7 @@ export default function Dashboard() {
       time: inviteActivity.time || "just now",
       color: "text-primary",
     },
+    ...acceptedActivities,
     subscription?.status && {
       icon: CreditCard,
       title: subscription?.status === 'trialing' ? 'Trial started' : 'Subscription active',
@@ -211,32 +239,7 @@ export default function Dashboard() {
     },
     {
       icon: Key,
-      title: (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            // Get the test API token from configuration
-            const apiToken = getApiTokenById('test-api-token');
-            if (apiToken) {
-              setApiDialog({
-                open: true,
-                token: apiToken.token,
-                tokenName: apiToken.name
-              });
-            } else {
-              setApiDialog({
-                open: true,
-                token: 'sk-test-1234-56789-abcdefghijklmnop',
-                tokenName: 'Test API Token'
-              });
-            }
-          }}
-          className="underline decoration-dotted text-left focus:outline-none"
-        >
-          API Keys
-        </button>
-      ),
+      title: "API Keys",
       href: "#",
       onClick: (e: React.MouseEvent) => {
         e.preventDefault();
@@ -302,25 +305,6 @@ export default function Dashboard() {
                 </span>
               </p>
             </div>
-            {/* <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-2"
-                data-testid="button-notifications"
-              >
-                <Bell className="h-4 w-4" />
-                <span className="hidden sm:inline">Notifications</span>
-              </Button>
-              <div className="flex items-center space-x-3">
-                <div
-                  className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold"
-                  data-testid="text-user-avatar"
-                >
-                  {user?.name?.charAt(0) || "U"}
-                </div>
-              </div>
-            </div> */}
           </div>
         </div>
       </div>
@@ -516,7 +500,7 @@ export default function Dashboard() {
                 className="text-3xl font-bold text-foreground"
                 data-testid="text-stat-uptime"
               >
-                {stats.uptime}%
+                {stats.uptime.toFixed(2)}%
               </p>
             </CardContent>
           </Card>

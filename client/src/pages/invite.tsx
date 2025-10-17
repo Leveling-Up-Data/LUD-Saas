@@ -14,6 +14,7 @@ export default function Invite() {
     const [email, setEmail] = useState("");
     const [sending, setSending] = useState(false);
 
+    // Invitation can be sent by authenticated users only; if unauthenticated, go home
     if (!pb.authStore.isValid) {
         setLocation("/");
         return null;
@@ -25,35 +26,20 @@ export default function Invite() {
         setSending(true);
 
         try {
-            const localPart = email.split("@")[0] || "user";
-            const randomSuffix = Math.random().toString(36).slice(2, 8);
-            const username = `${localPart}-${randomSuffix}`.toLowerCase();
-            const name = localPart;
-            const tempPassword = Math.random().toString(36).slice(2) + Math.random().toString(36).toUpperCase().slice(2);
-
-            // 1) Try to create the user (ok if already exists)
-            try {
-                await pb.collection('users').create({
-                    email,
-                    username,
-                    name,
-                    password: tempPassword,
-                    passwordConfirm: tempPassword,
-                });
-            } catch (createErr: any) {
-                // If user already exists, proceed to password reset; otherwise bubble up
-                const msg = createErr?.message || "";
-                if (!/exists|unique|already/i.test(msg)) {
-                    throw createErr;
-                }
+            const inviterId = pb.authStore.model?.id || "unknown";
+            const res = await fetch('/api/invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, inviterId }),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data?.message || 'Failed to send invite');
             }
-
-            // 2) Send password reset email for the invited user to set their password
-            await pb.collection('users').requestPasswordReset(email);
 
             toast({
                 title: "Invitation sent",
-                description: `An email was sent to ${email} with a link to set a password.`,
+                description: `An email was sent to ${email} with a link to login at starfish.levelingupdata.com.`,
             });
 
             try {
@@ -66,7 +52,7 @@ export default function Invite() {
         } catch (err: any) {
             toast({
                 title: "Invite failed",
-                description: err?.message || "Please ensure PocketBase SMTP is configured and try again.",
+                description: err?.message || "Please try again later.",
                 variant: "destructive",
             });
         } finally {
