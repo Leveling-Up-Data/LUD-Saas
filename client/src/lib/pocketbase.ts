@@ -21,6 +21,26 @@ export interface AuthData {
   };
 }
 
+// Types for the users_tokens collection
+export interface UserTokenRecord {
+  id: string;
+  token_name?: string;     // collection field
+  token_id: string;        // API token (generated server-side)
+  user_id: string;         // relation to users
+  created?: string;
+  updated?: string;
+}
+
+// Client-side token generator (fallback if server hook isn't active)
+function generateRandomToken(length = 32): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let token = '';
+  for (let i = 0; i < length; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+}
+
 // Helper function to get user with subscription data
 async function getUserWithSubscription(pb: PocketBaseClient, userId: string): Promise<AuthData | null> {
   try {
@@ -73,6 +93,13 @@ export class PocketBaseClient extends PocketBase {
       const authData = await this.collection('users').authWithPassword(email, password);
       const userWithSubscription = await getUserWithSubscription(this, authData.record.id);
 
+      // Ensure the user has at least one API token record
+      try {
+        await this.ensureUserTokenForUser(authData.record.id);
+      } catch (err) {
+        console.warn('ensureUserTokenForUser failed (login):', err);
+      }
+      
       if (!userWithSubscription) {
         throw new Error('Failed to fetch user data');
       }
@@ -94,6 +121,13 @@ export class PocketBaseClient extends PocketBase {
         name
       });
 
+      // Ensure the new user has a default API token record
+      try {
+        await this.ensureUserTokenForUser(userData.id);
+      } catch (err) {
+        console.warn('ensureUserTokenForUser failed (register):', err);
+      }
+      
       return {
         id: userData.id,
         username: userData.username,
@@ -129,6 +163,71 @@ export class PocketBaseClient extends PocketBase {
 
   get isValid() {
     return this.authStore.isValid;
+  }
+
+  // ========== users_tokens helpers ==========
+  /** Ensure the user has at least one token; create a default if none exists. */
+  private async ensureUserTokenForUser(userId: string): Promise<void> {
+    try {
+      const existing = await this.listUserTokens({ userId, page: 1, perPage: 1 });
+      if (Array.isArray(existing) && existing.length > 0) return;
+    } catch (_) {
+      // If listing fails, attempt creation anyway
+    }
+
+    await this.createUserToken({ tokenName: 'default', userId });
+  }
+
+  /**
+   * Create a token record in `users_tokens`.
+   * Will default the relation to the currently authenticated user if `userId` is not provided.
+   */
+  async createUserToken(input: { tokenName?: string; userId?: string; tokenId?: string; }): Promise<UserTokenRecord> {
+    const currentUserId = input.userId || this.authStore.model?.id;
+    if (!currentUserId) {
+      throw new Error('Not authenticated');
+    }
+
+    // Build payload for user_tokens collection
+    const payload: Record<string, unknown> = {
+      user_id: currentUserId,
+    };
+    payload.token_name = (input.tokenName && input.tokenName.trim()) || 'default';
+    payload.token_id = input.tokenId || generateRandomToken(32);
+
+    const record = await this.collection('user_tokens').create(payload);
+    return record as unknown as UserTokenRecord;
+  }
+
+  /** List token records for a user (defaults to current user). */
+  async listUserTokens(options?: { userId?: string; page?: number; perPage?: number; }): Promise<UserTokenRecord[]> {
+    const userId = options?.userId || this.authStore.model?.id;
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
+
+    const page = options?.page ?? 1;
+    const perPage = options?.perPage ?? 50;
+
+    const list = await this.collection('user_tokens').getList(page, perPage, {
+      filter: `user_id = "${userId}"`,
+      sort: '-created',
+    });
+    return list.items as unknown as UserTokenRecord[];
+  }
+
+  /** Update a token record by id. */
+  async updateUserToken(id: string, updates: Partial<Pick<UserTokenRecord, 'token_name'>>): Promise<UserTokenRecord> {
+    const payload: Record<string, unknown> = {};
+    if (typeof updates.token_name === 'string') payload.token_name = updates.token_name;
+
+    const record = await this.collection('user_tokens').update(id, payload);
+    return record as unknown as UserTokenRecord;
+  }
+
+  /** Delete a token record by id. */
+  async deleteUserToken(id: string): Promise<void> {
+    await this.collection('user_tokens').delete(id);
   }
 }
 
