@@ -113,6 +113,7 @@ export class PocketBaseClient extends PocketBase {
     try {
       const userData = await this.collection('users').create({
         email,
+        emailVisibility: true,
         password,
         passwordConfirm: password,
         username,
