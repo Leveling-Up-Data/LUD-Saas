@@ -71,14 +71,16 @@ async function getUserWithSubscription(pb: PocketBaseClient, userId: string): Pr
         stripeSubscriptionId: user.stripeSubscriptionId,
         created: user.created
       },
-      subscription: subscription ? {
-        id: subscription.id,
-        plan: subscription.plan,
-        status: subscription.status,
-        currentPeriodEnd: subscription.currentPeriodEnd,
-        amount: subscription.amount,
-        trialEnd: subscription.trialEnd
-      } : undefined
+      subscription: subscription
+        ? {
+          id: subscription.id,
+          plan: subscription.plan,
+          status: subscription.status,
+          currentPeriodEnd: subscription.currentPeriodEnd,
+          amount: subscription.amount,
+          trialEnd: subscription.trialEnd,
+        }
+        : undefined,
     };
   } catch (error) {
     console.error('Error fetching user with subscription:', error);
@@ -234,13 +236,18 @@ export class PocketBaseClient extends PocketBase {
 // Create instance
 export const pb = new PocketBaseClient(import.meta.env.VITE_POCKETBASE_URL || 'https://pb.levelingupdata.com');
 
-// 1) Load auth from cookie first (more resilient than localStorage-only)
-try {
-  if (typeof document !== 'undefined') {
-    pb.authStore.loadFromCookie(document.cookie);
+// Initialize auth from stored token
+if (typeof window !== "undefined") {
+  pb.refresh();
+  // 1) Load auth from cookie first (more resilient than localStorage-only)
+  try {
+    if (typeof document !== 'undefined') {
+      pb.authStore.loadFromCookie(document.cookie);
+    }
+  } catch (_) {
+    // ignore malformed cookie
   }
-} catch (_) {
-  // ignore malformed cookie
+
 }
 
 function syncAuthCookie() {
