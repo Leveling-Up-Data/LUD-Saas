@@ -73,9 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const finalUsername = username || email.split("@")[0];
         await pb.create(email, password, finalUsername, name);
-        const data = await pb.authWithPassword(email, password);
-        setUser(data.user);
-        setSubscription(data.subscription);
+        // Do not auto-login; require email verification first
+        setUser(null);
+        setSubscription(undefined);
       } finally {
         setLoading(false);
       }

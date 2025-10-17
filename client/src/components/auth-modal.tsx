@@ -64,16 +64,12 @@ export function AuthModal({
       await signUp(formData.name, formData.email, formData.password, username);
 
       toast({
-        title: "Welcome to SaaSFlow!",
-        description: "Your account has been created successfully.",
+        title: "Verify your email",
+        description:
+          "We sent a verification link to your inbox. Please verify before signing in.",
       });
 
       onClose();
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        setLocation("/pricing");
-      }
     } catch (error: any) {
       toast({
         title: "Registration Failed",
@@ -105,9 +101,13 @@ export function AuthModal({
         setLocation("/dashboard");
       }
     } catch (error: any) {
+      const msg =
+        error?.message === "Please verify your email before logging in."
+          ? "Please verify your email before logging in. Check your inbox for the verification link."
+          : "Invalid email or password. Please try again.";
       toast({
         title: "Sign In Failed",
-        description: "Invalid email or password. Please try again.",
+        description: msg,
         variant: "destructive",
       });
     } finally {
@@ -196,9 +196,36 @@ export function AuthModal({
             )}
             {mode === "signin" && (
               <div className="text-right">
-                <a href="#" className="text-sm text-primary hover:underline">
+                <button
+                  type="button"
+                  className="text-sm text-primary hover:underline"
+                  onClick={async () => {
+                    if (!formData.email) {
+                      toast({
+                        title: "Enter your email",
+                        description:
+                          "Please enter your email above to reset your password.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    try {
+                      await pb.requestPasswordReset(formData.email);
+                      toast({
+                        title: "Reset email sent",
+                        description: "Check your inbox for the reset link.",
+                      });
+                    } catch (err: any) {
+                      toast({
+                        title: "Reset failed",
+                        description: err?.message || "Try again.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
                   Forgot password?
-                </a>
+                </button>
               </div>
             )}
           </div>
