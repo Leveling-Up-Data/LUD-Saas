@@ -11,6 +11,7 @@ export interface AuthData {
     stripeSubscriptionId?: string;
     created: string;
   };
+
   subscription?: {
     id: string;
     plan: string;
@@ -21,12 +22,12 @@ export interface AuthData {
   };
 }
 
-// Types for the users_tokens collection
+
 export interface UserTokenRecord {
   id: string;
   token_name?: string;     // collection field
   token_id: string;        // API token (generated server-side)
-  user_id: string;         // relation to users
+  user_id: string;         
   created?: string;
   updated?: string;
 }
