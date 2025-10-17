@@ -15,7 +15,7 @@ onRecordBeforeCreate('user_tokens', (e) => {
     e.record.set('token_name', 'default');
   }
 
- 
+  // If no token provided, generate one
   let token = e.record.get('token_id');
   if (!token || typeof token !== 'string' || token.length < 16) {
     token = crypto.randomBytes(32).toString('hex'); // 64 chars hex
@@ -23,7 +23,7 @@ onRecordBeforeCreate('user_tokens', (e) => {
   }
 });
 
-
+// Prevent token from being changed after creation
 onRecordBeforeUpdate('user_tokens', (e) => {
   if (e.record.get('token_id') !== e.originalRecord.get('token_id')) {
     // Revert token changes
