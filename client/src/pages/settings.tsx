@@ -32,28 +32,20 @@ export default function SettingsPage() {
       return;
     setLoading(true);
     try {
-      // First archive basic user data to closed_accounts
-      await pb.collection("closed_accounts").create({
-        email: user.email,
-        name: user.name,
-        username: user.username,
-      });
+      // Delete any dependent data here if your schema requires it
+      // Example: await pb.collection('subscriptions').delete(user.subscriptionId)
 
-      // Then delete the user record
       await pb.collection("users").delete(user.id);
       signOut();
       toast({
         title: "Account closed",
-        description: "Your account has been deleted and archived.",
+        description: "Your account has been deleted.",
       });
       setLocation("/");
     } catch (e: any) {
       toast({
         title: "Delete failed",
-        description:
-          e?.message ||
-          e?.response?.message ||
-          "Could not archive or delete the account. Try again.",
+        description: e?.message || "Try again.",
         variant: "destructive",
       });
     } finally {
