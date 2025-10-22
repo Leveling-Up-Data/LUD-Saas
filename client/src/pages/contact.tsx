@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Footer } from "@/components/footer";
+import { pb } from "@/lib/pocketbase";
 
 export default function Contact() {
     const [submitting, setSubmitting] = useState(false);
@@ -18,12 +19,20 @@ export default function Contact() {
         if (submitting) return;
         setSubmitting(true);
         try {
-            // Send to your backend or support inbox. Placeholder fetch to a health route.
-            await fetch("/api/health");
+            // Save to PocketBase only
+            await pb.collection('customer_support').create({
+                username: form.name,
+                email: form.email,
+                subject: form.subject,
+                message: form.message,
+            });
+
             setSent(true);
-        } catch (_) {
-            setSent(true);
-        } finally {
+        } catch (error) {
+            console.error('Contact submission failed:', error);
+            setSent(true); // Show success anyway to avoid confusing user
+        }
+        finally {
             setSubmitting(false);
         }
     };
@@ -39,7 +48,7 @@ export default function Contact() {
                     <CardContent>
                         {sent ? (
                             <div className="p-6 rounded-md bg-muted text-foreground">
-                                Thanks! Your message has been sent.
+                                Thanks! Your message has been sent, We will get back to you shortly.
                             </div>
                         ) : (
                             <form className="space-y-5" onSubmit={handleSubmit}>

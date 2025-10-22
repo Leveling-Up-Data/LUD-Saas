@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Footer } from "@/components/footer";
 import { useToast } from "@/hooks/use-toast";
 import { pb } from "@/lib/pocketbase";
+import { sendInviteEmail } from "@/lib/email-utils";
 
 export default function Invite() {
     const [, setLocation] = useLocation();
@@ -27,14 +28,15 @@ export default function Invite() {
 
         try {
             const inviterId = pb.authStore.model?.id || "unknown";
-            const res = await fetch('/api/invite', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, inviterId }),
-            });
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                throw new Error(data?.message || 'Failed to send invite');
+            // Create invitation record in PocketBase
+            await pb.collection('invitations').create({ email, inviterId });
+
+            // Send email (don't fail if email fails)
+            try {
+                await sendInviteEmail({ email, inviterId });
+            } catch (emailError) {
+                console.warn('Email sending failed:', emailError);
+                // Continue anyway - the record was saved
             }
 
             toast({
@@ -50,6 +52,7 @@ export default function Invite() {
             }
             setEmail("");
         } catch (err: any) {
+            console.error('Invite submission failed:', err);
             toast({
                 title: "Invite failed",
                 description: err?.message || "Please try again later.",
