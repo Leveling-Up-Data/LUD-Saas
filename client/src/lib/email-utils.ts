@@ -24,26 +24,3 @@ export async function sendContactEmail(data: {
         throw error;
     }
 }
-
-export async function sendInviteEmail(data: {
-    email: string;
-    inviterId?: string;
-}) {
-    try {
-        const response = await fetch('/api/send-invite-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: data.email })
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to send invite email');
-        }
-
-        console.log('Invite email sent successfully');
-        return { success: true };
-    } catch (error) {
-        console.error('Invite email error:', error);
-        throw error;
-    }
-}

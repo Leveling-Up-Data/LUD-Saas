@@ -66,6 +66,24 @@ This document outlines the PocketBase collections and configuration needed for t
 - Update rule: Admin only
 - Delete rule: Admin only
 
+### 4. Invitations Collection
+**Collection Name**: `invitations`
+
+**Fields**:
+- `email` (email, required, unique)
+- `inviterId` (text, required) - stores the user ID who sent the invite
+- `status` (text, required) - e.g., "pending", "accepted", "expired"
+- `token` (text, required, unique) - for the invite link
+- `expiresAt` (date, required) - when the invite expires
+- `acceptedAt` (date, optional) - when the invite was accepted
+
+**Settings**:
+- List rule: `inviterId = @request.auth.id`
+- View rule: `inviterId = @request.auth.id OR email = @request.data.email`
+- Create rule: `inviterId = @request.auth.id`
+- Update rule: `inviterId = @request.auth.id`
+- Delete rule: `inviterId = @request.auth.id`
+
 ## Seed Data
 
 ### Products to Create:

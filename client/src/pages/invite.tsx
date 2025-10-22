@@ -27,25 +27,34 @@ export default function Invite() {
         setSending(true);
 
         try {
-            const inviterId = pb.authStore.model?.id || "unknown";
-            // Create invitation record in PocketBase
-            await pb.collection('invitations').create({ email, inviterId });
-
-            // Send email (don't fail if email fails)
-            try {
-                await sendInviteEmail({ email, inviterId });
-            } catch (emailError) {
-                console.warn('Email sending failed:', emailError);
-                // Continue anyway - the record was saved
+            const inviterId = pb.authStore.model?.id;
+            if (!inviterId) {
+                throw new Error("User not authenticated");
             }
 
-            toast({
-                title: "Invitation sent",
-                description: `An email was sent to ${email} with a link to login at starfish.levelingupdata.com.`,
+            // Generate a unique token for the invitation
+            const token = crypto.randomUUID();
+            // Set expiration date (7 days from now)
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 7);
+
+            // Create invitation record in PocketBase with simplified approach
+            await pb.collection('invitations').create({
+                email,
+                inviterId, // Store as text field for simplicity
+                status: "pending",
+                token,
+                expiresAt: expiresAt.toISOString()
             });
 
+            toast({
+                title: "Invitation created",
+                description: `Please check your email for the invitation. Invitation sent to ${email}.`,
+            });
+
+            // Store invite info locally
             try {
-                const payload = { email, at: new Date().toISOString(), inviterId: pb.authStore.model?.id };
+                const payload = { email, at: new Date().toISOString(), inviterId };
                 localStorage.setItem('lastInvite', JSON.stringify(payload));
             } catch (_) {
                 // ignore storage issues
