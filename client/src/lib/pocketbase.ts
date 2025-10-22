@@ -140,6 +140,8 @@ export class PocketBaseClient extends PocketBase {
         passwordConfirm: password,
         username,
         name,
+        // Satisfy required field validation in PocketBase users auth collection
+        emailVisibility: true,
       });
       // Trigger email verification for the new user (non-fatal on error)
       try {
