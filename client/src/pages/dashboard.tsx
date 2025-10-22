@@ -37,6 +37,7 @@ import {
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
+  const [isAuthenticated, setIsAuthenticated] = useState(pb.authStore.isValid);
   const [apiDialog, setApiDialog] = useState<{ open: boolean; token: string; tokenName: string }>({
     open: false,
     token: '',
@@ -46,7 +47,7 @@ export default function Dashboard() {
 
   const { data: userData, isLoading } = useQuery({
     queryKey: ["user", pb.authStore.model?.id],
-    enabled: pb.authStore.isValid,
+    enabled: isAuthenticated,
     queryFn: async () => {
       try {
         if (!pb.authStore.model?.id) return null;
@@ -112,10 +113,13 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    if (!pb.authStore.isValid) {
-      setLocation("/");
-      return;
-    }
+    const unsubscribe = pb.authStore.onChange(() => {
+      const valid = pb.authStore.isValid;
+      setIsAuthenticated(valid);
+      if (!valid) setLocation("/");
+    });
+
+    if (!pb.authStore.isValid) setLocation("/");
 
     // Check for payment success
     const urlParams = new URLSearchParams(window.location.search);
@@ -127,9 +131,10 @@ export default function Dashboard() {
       // Clean up URL
       window.history.replaceState({}, "", "/dashboard");
     }
+    return unsubscribe;
   }, [setLocation, toast]);
 
-  if (!pb.authStore.isValid) {
+  if (!isAuthenticated) {
     return null;
   }
 
@@ -507,11 +512,10 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Activity & Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           {/* Recent Activity */}
           <div className="lg:col-span-2">
-            <Card className="shadow-sm">
+            <Card className="shadow-sm h-full">
               <CardHeader>
                 <CardTitle className="text-xl">Recent Activity</CardTitle>
                 <CardDescription>
@@ -548,9 +552,10 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Quick Actions */}
-          <div>
-            <Card className="shadow-sm mb-6">
+          {/* Right Column - Quick Actions & Support */}
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="text-xl">Quick Actions</CardTitle>
                 <CardDescription>Common tasks and settings</CardDescription>
@@ -577,81 +582,81 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Support Card */}
-          <Card className="shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-start space-x-3">
-                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <LifeBuoy className="h-5 w-5 text-primary" />
+            {/* Support Card */}
+            <Card className="shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-start space-x-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <LifeBuoy className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground mb-1">
+                      Need Help?
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Our support team is here for you 24/7
+                    </p>
+                    <Link to="/contact">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-primary hover:text-primary/90 p-0 h-auto font-medium"
+                        data-testid="button-contact-support"
+                      >
+                        Contact Support <ArrowRight className="ml-1 h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-foreground mb-1">
-                    Need Help?
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Our support team is here for you 24/7
-                  </p>
-                  <Link to="/contact">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-primary hover:text-primary/90 p-0 h-auto font-medium"
-                      data-testid="button-contact-support"
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Payment Method Section */}
+        {subscription && (
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-xl">Payment Method</CardTitle>
+              <CardDescription>Manage your billing information</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center">
+                    <CreditCard className="h-8 w-8 text-white" />
+                  </div>
+                  <div>
+                    <p
+                      className="font-semibold text-foreground"
+                      data-testid="text-payment-method"
                     >
-                      Contact Support <ArrowRight className="ml-1 h-4 w-4" />
-                    </Button>
-                  </Link>
+                      •••• •••• •••• 4242
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Expires 12/2025
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3">
+                  <Button variant="outline" data-testid="button-update-card">
+                    Update Card
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    data-testid="button-remove-card"
+                  >
+                    Remove
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </div>
+        )}
       </div>
-
-      {/* Payment Method Section */}
-      {subscription && (
-        <Card className="mt-8 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-xl">Payment Method</CardTitle>
-            <CardDescription>Manage your billing information</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center">
-                  <CreditCard className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <p
-                    className="font-semibold text-foreground"
-                    data-testid="text-payment-method"
-                  >
-                    •••• •••• •••• 4242
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Expires 12/2025
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex space-x-3">
-                <Button variant="outline" data-testid="button-update-card">
-                  Update Card
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  data-testid="button-remove-card"
-                >
-                  Remove
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <Footer />
 

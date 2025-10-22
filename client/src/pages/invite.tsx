@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Footer } from "@/components/footer";
 import { useToast } from "@/hooks/use-toast";
 import { pb } from "@/lib/pocketbase";
+import { sendInviteEmail } from "@/lib/email-utils";
 
 export default function Invite() {
     const [, setLocation] = useLocation();
@@ -26,30 +27,41 @@ export default function Invite() {
         setSending(true);
 
         try {
-            const inviterId = pb.authStore.model?.id || "unknown";
-            const res = await fetch('/api/invite', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, inviterId }),
-            });
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                throw new Error(data?.message || 'Failed to send invite');
+            const inviterId = pb.authStore.model?.id;
+            if (!inviterId) {
+                throw new Error("User not authenticated");
             }
 
-            toast({
-                title: "Invitation sent",
-                description: `An email was sent to ${email} with a link to login at starfish.levelingupdata.com.`,
+            // Generate a unique token for the invitation
+            const token = crypto.randomUUID();
+            // Set expiration date (7 days from now)
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 7);
+
+            // Create invitation record in PocketBase with simplified approach
+            await pb.collection('invitations').create({
+                email,
+                inviterId, // Store as text field for simplicity
+                status: "pending",
+                token,
+                expiresAt: expiresAt.toISOString()
             });
 
+            toast({
+                title: "Invitation created",
+                description: `Please check your email for the invitation. Invitation sent to ${email}.`,
+            });
+
+            // Store invite info locally
             try {
-                const payload = { email, at: new Date().toISOString(), inviterId: pb.authStore.model?.id };
+                const payload = { email, at: new Date().toISOString(), inviterId };
                 localStorage.setItem('lastInvite', JSON.stringify(payload));
             } catch (_) {
                 // ignore storage issues
             }
             setEmail("");
         } catch (err: any) {
+            console.error('Invite submission failed:', err);
             toast({
                 title: "Invite failed",
                 description: err?.message || "Please try again later.",

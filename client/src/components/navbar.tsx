@@ -127,9 +127,11 @@ export function Navbar() {
               <Link to="/products" className="text-muted-foreground hover:text-foreground transition">
                 Products
               </Link>
-              <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition">
-                Dashboard
-              </Link>
+              {isAuthenticated && (
+                <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition">
+                  Dashboard
+                </Link>
+              )}
 
               {isAuthenticated ? (
                 <div className="flex items-center space-x-4">
@@ -195,9 +197,11 @@ export function Navbar() {
               <Link to="/products" className="block py-2 text-muted-foreground hover:text-foreground transition">
                 Products
               </Link>
-              <Link to="/dashboard" className="block py-2 text-muted-foreground hover:text-foreground transition">
-                Dashboard
-              </Link>
+              {isAuthenticated && (
+                <Link to="/dashboard" className="block py-2 text-muted-foreground hover:text-foreground transition">
+                  Dashboard
+                </Link>
+              )}
               <Link to="/support" className="block py-2 text-muted-foreground hover:text-foreground transition">
                 Support
               </Link>

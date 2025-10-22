@@ -31,73 +31,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: 'healthy', timestamp: new Date().toISOString() });
   });
 
-  // Products endpoint (fallback if PocketBase is not available)
-  // Invite endpoint (SMTP email sending)
-  const inviteSchema = z.object({
-    email: z.string().email(),
-    inviterId: z.string().min(1),
-  });
+  // Email endpoints using your SMTP credentials
+  const smtpConfig = {
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: 'atom@levelingupdata.com',
+      pass: 'tblmdineodbegxge'
+    }
+  };
 
-  app.post('/api/invite', async (req, res) => {
+  const transporter = nodemailer.createTransporter(smtpConfig);
+
+  // Contact email endpoint
+  app.post('/api/send-contact-email', async (req, res) => {
     try {
-      const { email, inviterId } = inviteSchema.parse(req.body);
+      const { username, email, subject, message } = req.body;
 
-      const origin = "https://starfish.levelingupdata.com/";
-
-      // Hardcoded SMTP credentials per user request
-      const smtpConfig = {
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
-        auth: { user: 'atom@levelingupdata.com', pass: 'tblmdineodbegxge' },
+      const mailOptions = {
         from: 'hello@levelingupdata.com',
+        to: email,
+        subject: `We received your message: ${subject}`,
+        text: `Hi ${username},\n\nThanks for contacting us! We've received your message and our team will get back to you shortly.\n\nSubject: ${subject}\n\nMessage:\n${message}\n\nBest regards,\nLeveling Up Data Support`,
+        html: `
+          <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height:1.6; color:#111827;">
+            <h2 style="margin:0 0 12px;">Thanks, we received your message</h2>
+            <p style="margin:0 0 12px;">Hi <strong>${username}</strong>,</p>
+            <p style="margin:0 0 12px;">We've received your message and our team will get back to you shortly.</p>
+            <div style="margin:16px 0; padding:12px; background:#F3F4F6; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:6px;">Subject:</div>
+              <div>${subject}</div>
+              <div style="font-weight:600; margin:12px 0 6px;">Message:</div>
+              <div style="white-space:pre-wrap;">${message.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            </div>
+            <p style="margin:12px 0 0;">Best regards,<br/>Leveling Up Data Support</p>
+          </div>
+        `
       };
 
-      const transporter = nodemailer.createTransport({
-        host: smtpConfig.host,
-        port: smtpConfig.port,
-        secure: smtpConfig.secure,
-        auth: smtpConfig.auth,
-      });
-
-      // Redirect to provided login/signup URL directly (no PB flows)
-      const loginUrl = `https://starfish.levelingupdata.com/`;
-      const subject = `You're invited to join`;
-      const textBody = `You've been invited. Click the link to sign up or log in: ${loginUrl}`;
-      const htmlBody = `
-        <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height:1.6;">
-          <h2>You're invited</h2>
-          <p>You have been invited by user <strong>${email}</strong>.</p>
-          <p>Click the button below to sign up or log in:</p>
-          <p>
-            <a href="${loginUrl}"
-               style="display:inline-block;background:#111827;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">
-              Open Login / Signup
-            </a>
-          </p>
-          <p>If the button doesn't work, copy and paste this URL into your browser:<br/>
-            <a href="${loginUrl}">${loginUrl}</a>
-          </p>
-        </div>
-      `;
-
-      await transporter.sendMail({
-        from: smtpConfig.from,
-        to: email,
-        subject,
-        text: textBody,
-        html: htmlBody,
-      });
-
-      res.json({ status: 'sent', email, inviterId, timestamp: new Date().toISOString() });
-    } catch (err: any) {
-      const message = err?.message || 'Invalid request';
-      res.status(400).json({ message });
+      await transporter.sendMail(mailOptions);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Contact email error:', error);
+      res.status(500).json({ error: 'Failed to send email' });
     }
   });
 
-  // Removed Sentry uptime proxy per request
+  // Invite email endpoint
+  app.post('/api/send-invite-email', async (req, res) => {
+    try {
+      const { email } = req.body;
+      const loginUrl = 'https://starfish.levelingupdata.com/';
 
+      const mailOptions = {
+        from: 'hello@levelingupdata.com',
+        to: email,
+        subject: `You're invited to join`,
+        text: `You've been invited. Click the link to sign up or log in: ${loginUrl}`,
+        html: `
+          <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height:1.6;">
+            <h2>You're invited</h2>
+            <p>You have been invited.</p>
+            <p>
+              <a href="${loginUrl}"
+                 style="display:inline-block;background:#111827;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">
+                Open Login / Signup
+              </a>
+            </p>
+            <p>If the button doesn't work, copy and paste this URL into your browser:<br/>
+              <a href="${loginUrl}">${loginUrl}</a>
+            </p>
+          </div>
+        `
+      };
+
+      await transporter.sendMail(mailOptions);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Invite email error:', error);
+      res.status(500).json({ error: 'Failed to send email' });
+    }
+  });
+
+  // Products endpoint (fallback if PocketBase is not available)
   app.get('/api/products', (req, res) => {
     const products = [
       {
