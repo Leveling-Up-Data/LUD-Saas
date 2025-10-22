@@ -273,8 +273,7 @@ export default function Dashboard() {
       href: "/settings",
       onClick: (e: React.MouseEvent) => {
         e.preventDefault();
-        // TODO: Implement settings functionality
-        console.log('Settings clicked');
+        setLocation('/settings');
       }
     }
   ];
