@@ -90,4 +90,4 @@ ENV NODE_ENV=production
 ENV PORT=8080
 
 # Start the compiled server (serves API and frontend)
-CMD ["node", "dist/index.js"]
+CMD ["node", "server.js"]
