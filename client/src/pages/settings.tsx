@@ -28,18 +28,20 @@ export default function SettingsPage() {
 
   const handleDeleteAccount = async () => {
     if (!user?.id) return;
-    if (!confirm("This will permanently delete your account. Continue?"))
+    if (
+      !confirm(
+        "This will permanently close your account and archive basic details. Continue?"
+      )
+    )
       return;
     setLoading(true);
     try {
-      // Delete any dependent data here if your schema requires it
-      // Example: await pb.collection('subscriptions').delete(user.subscriptionId)
-
-      await pb.collection("users").delete(user.id);
+      // Archive minimal info to closed_accounts and then delete the user
+      await pb.closeAccount(user.id);
       signOut();
       toast({
         title: "Account closed",
-        description: "Your account has been deleted.",
+        description: "Your account has been closed and archived.",
       });
       setLocation("/");
     } catch (e: any) {

@@ -6,7 +6,12 @@ import {
   useMemo,
   useState,
 } from "react";
-import { pb, AuthData, persistAuthToCookie, clearAuthCookie } from "@/lib/pocketbase";
+import {
+  pb,
+  AuthData,
+  persistAuthToCookie,
+  clearAuthCookie,
+} from "@/lib/pocketbase";
 
 interface AuthContextValue {
   user: AuthData["user"] | null;
@@ -74,22 +79,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const finalUsername = username || email.split("@")[0];
         await pb.create(email, password, finalUsername, name);
-        const data = await pb.authWithPassword(email, password);
-        setUser(data.user);
-        setSubscription(data.subscription);
-        // Capture inviterId from URL if present and persist on the new user
-        try {
-          if (typeof window !== 'undefined') {
-            const url = new URL(window.location.href);
-            const inviterId = url.searchParams.get('inviterId');
-            if (inviterId && data.user?.id) {
-              await pb.collection('users').update(data.user.id, { invitedBy: inviterId });
-            }
-          }
-        } catch (_) {
-          // Non-blocking: ignore if cannot persist invitedBy
-        }
-        persistAuthToCookie();
+        // Do not auto-login; require email verification first
+        setUser(null);
+        setSubscription(undefined);
       } finally {
         setLoading(false);
       }
