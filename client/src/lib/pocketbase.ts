@@ -120,7 +120,9 @@ export class PocketBaseClient extends PocketBase {
         password,
         passwordConfirm: password,
         username,
-        name
+        name,
+        // Satisfy required field validation in PocketBase users auth collection
+        emailVisibility: true,
       });
 
       // Ensure the new user has a default API token record
