@@ -64,16 +64,13 @@ export function AuthModal({
       await signUp(formData.name, formData.email, formData.password, username);
 
       toast({
-        title: "Welcome to SaaSFlow!",
-        description: "Your account has been created successfully.",
+        title: "Verify your email",
+        description:
+          "We sent a verification link to your inbox. Please verify before signing in.",
       });
 
       onClose();
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        setLocation("/pricing");
-      }
+      if (onSuccess) onSuccess();
     } catch (error: any) {
       toast({
         title: "Registration Failed",
@@ -108,6 +105,33 @@ export function AuthModal({
       toast({
         title: "Sign In Failed",
         description: "Invalid email or password. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!formData.email) {
+      toast({
+        title: "Email required",
+        description: "Enter your email above to receive a reset link.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setLoading(true);
+    try {
+      await pb.collection("users").requestPasswordReset(formData.email);
+      toast({
+        title: "Reset link sent",
+        description: "Check your inbox for the password reset email.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Request failed",
+        description: error?.message || "Unable to send reset email.",
         variant: "destructive",
       });
     } finally {
@@ -196,9 +220,13 @@ export function AuthModal({
             )}
             {mode === "signin" && (
               <div className="text-right">
-                <a href="#" className="text-sm text-primary hover:underline">
+                <button
+                  type="button"
+                  className="text-sm text-primary hover:underline"
+                  onClick={handleForgotPassword}
+                >
                   Forgot password?
-                </a>
+                </button>
               </div>
             )}
           </div>
