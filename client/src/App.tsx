@@ -1,4 +1,5 @@
 import { Switch, Route } from "wouter";
+import React from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -18,6 +19,42 @@ import NotFound from "@/pages/not-found";
 import SettingsPage from "@/pages/settings";
 import ResetPasswordPage from "@/pages/reset-password";
 import Contact from "@/pages/contact";
+import Invite from "@/pages/invite";
+
+function ErrorBoundary({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorCatcher>
+      {children}
+    </ErrorCatcher>
+  );
+}
+
+class ErrorCatcher extends React.Component<React.PropsWithChildren<{}>, { hasError: boolean; message?: string }> {
+  constructor(props: React.PropsWithChildren<{}>) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, message: error?.message || 'Something went wrong' };
+  }
+  componentDidCatch(error: any, info: any) {
+    console.error('UI error:', error, info);
+  }
+  render() {
+    if (this.state?.hasError) {
+      return (
+        <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
+          <div className="max-w-lg text-center">
+            <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
+            <p className="text-muted-foreground mb-4">{this.state?.message || 'An unexpected error occurred.'}</p>
+            <a href="/" className="underline">Go home</a>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children as React.ReactNode;
+  }
+}
 
 function Router() {
   return (
@@ -33,6 +70,7 @@ function Router() {
       <Route path="/settings" component={SettingsPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/contact" component={Contact} />
+      <Route path="/invite" component={Invite} />
       <Route path="/checkout" component={Checkout} />
       <Route component={NotFound} />
     </Switch>
@@ -45,7 +83,9 @@ function App() {
       <TooltipProvider>
         <div className="min-h-screen bg-background text-foreground">
           <Navbar />
-          <Router />
+          <ErrorBoundary>
+            <Router />
+          </ErrorBoundary>
           <Toaster />
           <Chatbot />
         </div>
