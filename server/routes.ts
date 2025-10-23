@@ -53,7 +53,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         from: 'hello@levelingupdata.com',
         to: email,
         subject: `We received your message: ${subject}`,
-        text: `Hi ${username},\n\nThanks for contacting us! We've received your message and our team will get back to you shortly.\n\nSubject: ${subject}\n\nMessage:\n${message}\n\nBest regards,\nLeveling Up Data Support`,
+        text: `Hi ${username},\n\nThanks for contacting us! We've received your message and our team will get back to you shortly.\n\nSubject: ${subject}\n\nMessage:\n${message}\n\nBest regards,\nStarfish Support`,
         html: `
           <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height:1.6; color:#111827;">
             <h2 style="margin:0 0 12px;">Thanks, we received your message</h2>
@@ -65,7 +65,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               <div style="font-weight:600; margin:12px 0 6px;">Message:</div>
               <div style="white-space:pre-wrap;">${message.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
             </div>
-            <p style="margin:12px 0 0;">Best regards,<br/>Leveling Up Data Support</p>
+            <p style="margin:12px 0 0;">Best regards,<br/>Starfish Support</p>
           </div>
         `
       };

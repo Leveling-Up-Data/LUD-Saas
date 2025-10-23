@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Box, Menu, X } from "lucide-react";
+import { Box, Menu, Star, X } from "lucide-react";
 import { AuthModal } from "./auth-modal";
 import { ApiTokenDialog } from "./api-token-dialog";
 import { pb } from "@/lib/pocketbase";
@@ -107,10 +107,10 @@ export function Navbar() {
           <div className="flex justify-between items-center h-16">
             <Link to="/dashboard" className="flex items-center space-x-2">
               <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
-                <Box className="text-primary-foreground text-xl" size={20} />
+                <Star className="text-white text-xl" size={20} />
               </div>
               <span className="text-xl font-bold text-foreground">
-                Leveling Up Data
+                Starfish
               </span>
             </Link>
 

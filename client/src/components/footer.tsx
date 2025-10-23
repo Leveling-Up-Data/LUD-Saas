@@ -25,7 +25,7 @@ export function Footer() {
                     <div>
                         <h4 className="font-semibold text-foreground mb-4">Company</h4>
                         <ul className="space-y-2">
-                            <li><a href="#" className="text-muted-foreground hover:text-foreground transition">About</a></li>
+                            <li><Link to="/about" className="text-muted-foreground hover:text-foreground transition">About</Link></li>
                             <li><a href="https://levelingupdata.com/blog/" className="text-muted-foreground hover:text-foreground transition">Blog</a></li>
                             <li><Link to="/contact" className="text-muted-foreground hover:text-foreground transition">Contact</Link></li>
                         </ul>
@@ -34,9 +34,9 @@ export function Footer() {
                         <h4 className="font-semibold text-foreground mb-4">Resources</h4>
                         <ul className="space-y-2">
                             <li><Link to="/docs" className="text-muted-foreground hover:text-foreground transition">Documentation</Link></li>
-                            
+
                             <li><Link to="/support" className="text-muted-foreground hover:text-foreground transition">Support</Link></li>
-                            
+
                         </ul>
                     </div>
                     <div>
@@ -52,7 +52,7 @@ export function Footer() {
 
                 <div className="border-t border-border pt-8 text-center">
                     <p className="text-muted-foreground text-sm">
-                        © Leveling Up Data - {new Date().getFullYear()} All Rights Reserved.
+                        © Starfish - {new Date().getFullYear()} All Rights Reserved.
                     </p>
                 </div>
             </div>

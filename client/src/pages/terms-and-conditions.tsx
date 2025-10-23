@@ -37,7 +37,7 @@ export default function TermsAndConditions() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                By accessing or using Leveling Up Data! (<a href="https://levelingupdata.com/" className="text-primary hover:underline">https://levelingupdata.com/</a>), 
+                                By accessing or using Starfish! (<a href="https://levelingupdata.com/" className="text-primary hover:underline">https://levelingupdata.com/</a>),
                                 you agree to be bound by these Terms and all applicable laws and regulations. If you do not agree, please do not use our website.
                             </p>
                         </CardContent>
@@ -55,7 +55,7 @@ export default function TermsAndConditions() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                You agree to use the Site only for lawful purposes. You shall not engage in any activity that may disrupt the Site or infringe upon others' rights. 
+                                You agree to use the Site only for lawful purposes. You shall not engage in any activity that may disrupt the Site or infringe upon others' rights.
                                 Failure to comply may result in immediate termination of access.
                             </p>
                         </CardContent>
@@ -90,7 +90,7 @@ export default function TermsAndConditions() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                All content on the Site—including text, graphics, logos, and images—is owned or licensed by Leveling Up Data! and is protected under intellectual property laws. 
+                                All content on the Site—including text, graphics, logos, and images—is owned or licensed by Starfish! and is protected under intellectual property laws.
                                 You may not copy, reproduce, or distribute material without prior written consent.
                             </p>
                         </CardContent>
@@ -108,8 +108,8 @@ export default function TermsAndConditions() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                The Site is provided "as-is" without warranties of any kind. We do not guarantee accuracy or completeness of content. 
-                                Leveling Up Data! will not be liable for any damages arising from your use of the website.
+                                The Site is provided "as-is" without warranties of any kind. We do not guarantee accuracy or completeness of content.
+                                Starfish! will not be liable for any damages arising from your use of the website.
                             </p>
                         </CardContent>
                     </Card>
@@ -143,7 +143,7 @@ export default function TermsAndConditions() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                Our Site may display ads via third-party partners who may use cookies, web beacons, and similar technologies to serve personalized ads. 
+                                Our Site may display ads via third-party partners who may use cookies, web beacons, and similar technologies to serve personalized ads.
                                 We have no control over these practices. You can learn more in our Privacy Policy.
                             </p>
                         </CardContent>
@@ -161,7 +161,7 @@ export default function TermsAndConditions() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                We collect log file information—such as IP address, browser type, ISP, referral pages, and click data—to analyze trends and administer the Site. 
+                                We collect log file information—such as IP address, browser type, ISP, referral pages, and click data—to analyze trends and administer the Site.
                                 This information is not linked to personally identifiable data.
                             </p>
                         </CardContent>
@@ -179,7 +179,7 @@ export default function TermsAndConditions() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                We do not knowingly collect personal information from children under 13. If you believe your child may have submitted personal data, 
+                                We do not knowingly collect personal information from children under 13. If you believe your child may have submitted personal data,
                                 please contact us, and we will promptly remove it.
                             </p>
                         </CardContent>
@@ -197,7 +197,7 @@ export default function TermsAndConditions() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                We may update these Terms at any time to reflect changes in our services or legal obligations. Users will be notified of significant changes. 
+                                We may update these Terms at any time to reflect changes in our services or legal obligations. Users will be notified of significant changes.
                                 Continued use of the Site constitutes acceptance of the new Terms.
                             </p>
                         </CardContent>
@@ -215,7 +215,7 @@ export default function TermsAndConditions() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                If any provision of these Terms is deemed unenforceable, that provision will be removed or limited accordingly, 
+                                If any provision of these Terms is deemed unenforceable, that provision will be removed or limited accordingly,
                                 without affecting the validity of the remaining provisions.
                             </p>
                         </CardContent>
@@ -233,7 +233,7 @@ export default function TermsAndConditions() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                These Terms shall be governed by and construed in accordance with the laws of [Your Jurisdiction], without regard to its conflict of laws rules. 
+                                These Terms shall be governed by and construed in accordance with the laws of [Your Jurisdiction], without regard to its conflict of laws rules.
                                 Any dispute arising from these Terms shall be resolved in the courts of [Your Jurisdiction].
                             </p>
                         </CardContent>
@@ -254,7 +254,7 @@ export default function TermsAndConditions() {
                                 If you have any questions or concerns regarding these Terms, please contact us:
                             </p>
                             <div className="bg-muted p-4 rounded-lg">
-                                <p className="font-medium text-foreground mb-2">Leveling Up Data!</p>
+                                <p className="font-medium text-foreground mb-2">Starfish!</p>
                                 <p className="text-muted-foreground">
                                     Email: <a href="mailto:levelingupdata@gmail.com" className="text-primary hover:underline">levelingupdata@gmail.com</a>
                                 </p>

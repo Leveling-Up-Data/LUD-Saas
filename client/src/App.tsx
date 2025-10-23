@@ -19,6 +19,7 @@ import NotFound from "@/pages/not-found";
 import SettingsPage from "@/pages/settings";
 import Contact from "@/pages/contact";
 import Invite from "@/pages/invite";
+import About from "@/pages/about";
 
 function ErrorBoundary({ children }: { children: React.ReactNode }) {
   return (
@@ -69,6 +70,7 @@ function Router() {
       <Route path="/settings" component={SettingsPage} />
       <Route path="/contact" component={Contact} />
       <Route path="/invite" component={Invite} />
+      <Route path="/about" component={About} />
       <Route path="/checkout" component={Checkout} />
       <Route component={NotFound} />
     </Switch>
