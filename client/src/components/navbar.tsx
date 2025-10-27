@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Box, Menu, Star, X } from "lucide-react";
 import { AuthModal } from "./auth-modal";
 import { ApiTokenDialog } from "./api-token-dialog";
-import { pb } from "@/lib/pocketbase";
-import { useQuery } from "@tanstack/react-query";
 import { getApiTokenById } from "@/config/api-tokens";
+import { useAuth } from "@/lib/auth-context";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2 } from "lucide-react";
 
 export function Navbar() {
   const [authModal, setAuthModal] = useState<{
@@ -23,60 +24,10 @@ export function Navbar() {
     tokenName: ''
   });
 
-  const { data: authData } = useQuery({
-    queryKey: ["user", pb.authStore.model?.id],
-    enabled: pb.authStore.isValid,
-    queryFn: async () => {
-      if (!pb.authStore.model?.id) return null;
-
-      // Get user data
-      const user = await pb.collection("users").getOne(pb.authStore.model.id);
-
-      // Get subscription if exists
-      let subscription = null;
-      try {
-        const subscriptions = await pb
-          .collection("subscriptions")
-          .getList(1, 1, {
-            filter: `userId = "${pb.authStore.model.id}"`,
-            sort: "-created",
-          });
-        if (subscriptions.items.length > 0) {
-          subscription = subscriptions.items[0];
-        }
-      } catch (error) {
-        // No subscription found, that's okay
-      }
-
-      return {
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          name: user.name,
-          stripeCustomerId: user.stripeCustomerId,
-          stripeSubscriptionId: user.stripeSubscriptionId,
-          created: user.created,
-        },
-        subscription: subscription
-          ? {
-            id: subscription.id,
-            plan: subscription.plan,
-            status: subscription.status,
-            currentPeriodEnd: subscription.currentPeriodEnd,
-            amount: subscription.amount,
-            trialEnd: subscription.trialEnd,
-          }
-          : undefined,
-      };
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  const isAuthenticated = pb.authStore.isValid && pb.authStore.model;
+  const { user, isAuthenticated, signOut, loading } = useAuth();
 
   const handleSignOut = () => {
-    pb.logout();
+    signOut();
     window.location.href = "/";
   };
 
@@ -127,18 +78,30 @@ export function Navbar() {
               <Link to="/products" className="text-muted-foreground hover:text-foreground transition">
                 Products
               </Link>
-              {isAuthenticated && (
-                <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition">
-                  Dashboard
-                </Link>
+              {loading ? (
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <Skeleton className="w-20 h-5 bg-foreground/10" />
+                </div>
+              ) : (
+                isAuthenticated && (
+                  <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition">
+                    Dashboard
+                  </Link>
+                )
               )}
 
-              {isAuthenticated ? (
+              {loading ? (
+                <div className="flex items-center space-x-4">
+                  <Skeleton className="w-8 h-8 rounded-full bg-foreground/10" />
+                  <Skeleton className="w-20 h-9 rounded-md bg-foreground/10" />
+                </div>
+              ) : isAuthenticated ? (
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-3">
                     <Link to="/settings">
                       <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-semibold cursor-pointer" title="Account settings">
-                        {pb.authStore.model?.name?.charAt(0) || "U"}
+                        {user?.name?.charAt(0) || "U"}
                       </div>
                     </Link>
                     <Button
@@ -212,7 +175,12 @@ export function Navbar() {
                 API
               </button>
 
-              {isAuthenticated ? (
+              {loading ? (
+                <div className="pt-2 space-y-2">
+                  <div className="w-full h-9 rounded-md bg-muted animate-pulse" />
+                  <div className="w-full h-9 rounded-md bg-muted animate-pulse" />
+                </div>
+              ) : isAuthenticated ? (
                 <div className="pt-2 space-y-2">
                   <button
                     onClick={handleSignOut}

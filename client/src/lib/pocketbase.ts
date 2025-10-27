@@ -77,13 +77,13 @@ async function getUserWithSubscription(
       },
       subscription: subscription
         ? {
-            id: subscription.id,
-            plan: subscription.plan,
-            status: subscription.status,
-            currentPeriodEnd: subscription.currentPeriodEnd,
-            amount: subscription.amount,
-            trialEnd: subscription.trialEnd,
-          }
+          id: subscription.id,
+          plan: subscription.plan,
+          status: subscription.status,
+          currentPeriodEnd: subscription.currentPeriodEnd,
+          amount: subscription.amount,
+          trialEnd: subscription.trialEnd,
+        }
         : undefined,
     };
   } catch (error) {
@@ -316,32 +316,50 @@ export const pb = new PocketBaseClient(
   import.meta.env.VITE_POCKETBASE_URL || "https://pb.levelingupdata.com"
 );
 
-// Initialize auth from stored token
-if (typeof window !== "undefined") {
-  pb.refresh();
-  // 1) Load auth from cookie first (more resilient than localStorage-only)
-  try {
-    if (typeof document !== "undefined") {
-      pb.authStore.loadFromCookie(document.cookie);
-    }
-  } catch (_) {
-    // ignore malformed cookie
-  }
-}
+// Cookie options derived from environment
+const SECURE_COOKIES =
+  (import.meta as any).env?.PROD ||
+  ((import.meta as any).env?.VITE_SECURE_COOKIES === "true");
+const COOKIE_DOMAIN = (import.meta as any).env?.VITE_COOKIE_DOMAIN as
+  | string
+  | undefined;
 
 function syncAuthCookie() {
   if (typeof document === "undefined") return;
   const cookie = pb.authStore.exportToCookie({
     httpOnly: false,
-    secure: typeof location !== "undefined" && location.protocol === "https:",
+    secure: !!SECURE_COOKIES,
     sameSite: "Lax",
     path: "/",
+    domain: COOKIE_DOMAIN || undefined,
   });
   document.cookie = cookie;
 }
 
-// 2) Try to refresh on boot; regardless of outcome, sync cookie to reflect final state
+// Initialize auth from stored cookie FIRST, then refresh and keep cookie in sync
 if (typeof window !== "undefined") {
+  // Load from cookie eagerly
+  try {
+    if (typeof document !== "undefined") {
+      pb.authStore.loadFromCookie(document.cookie);
+      // Immediately reflect current state in cookie (normalizes flags)
+      syncAuthCookie();
+    }
+  } catch (_) {
+    // ignore malformed cookie
+  }
+
+  // Keep cookie synced with any auth changes (login/logout/refresh)
+  try {
+    // onChange signature: (token, model) => void
+    pb.authStore.onChange(() => {
+      syncAuthCookie();
+    });
+  } catch (_) {
+    // ignore if not supported
+  }
+
+  // Try to refresh to validate/extend the session
   pb.refresh().finally(() => {
     syncAuthCookie();
   });
@@ -353,6 +371,14 @@ export function persistAuthToCookie() {
 
 export function clearAuthCookie() {
   if (typeof document !== "undefined") {
-    document.cookie = "pb_auth=; Path=/; Max-Age=0; SameSite=Lax";
+    const parts = [
+      "pb_auth=",
+      "Path=/",
+      "Max-Age=0",
+      "SameSite=Lax",
+    ];
+    if (SECURE_COOKIES) parts.push("Secure");
+    if (COOKIE_DOMAIN) parts.push(`Domain=${COOKIE_DOMAIN}`);
+    document.cookie = parts.join("; ");
   }
 }

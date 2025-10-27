@@ -7,13 +7,19 @@ import { Footer } from "@/components/footer";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { pb } from "@/lib/pocketbase";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function SettingsPage() {
-  const { user, isAuthenticated, signOut, refresh } = useAuth();
+  const {
+    user,
+    isAuthenticated,
+    signOut,
+    refresh,
+    loading: authLoading,
+  } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: user?.name || "",
@@ -21,10 +27,22 @@ export default function SettingsPage() {
     email: user?.email || "",
   });
 
-  if (!isAuthenticated) {
-    setLocation("/");
-    return null;
-  }
+  // Hydrate form fields once when user becomes available (e.g., after reload)
+  useEffect(() => {
+    if (user?.id) {
+      setForm({
+        name: user.name || "",
+        username: user.username || "",
+        email: user.email || "",
+      });
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      setLocation("/");
+    }
+  }, [authLoading, isAuthenticated, setLocation]);
 
   const handleDeleteAccount = async () => {
     if (!user?.id) return;
@@ -34,7 +52,7 @@ export default function SettingsPage() {
       )
     )
       return;
-    setLoading(true);
+    setDeleting(true);
     try {
       // Archive minimal info to closed_accounts and then delete the user
       await pb.closeAccount(user.id);
@@ -51,7 +69,7 @@ export default function SettingsPage() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setDeleting(false);
     }
   };
 
@@ -90,6 +108,20 @@ export default function SettingsPage() {
       setSaving(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          <div className="h-10 w-1/3 bg-muted animate-pulse rounded" />
+          <div className="h-64 w-full bg-muted animate-pulse rounded" />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) return null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -150,11 +182,11 @@ export default function SettingsPage() {
           <CardContent>
             <Button
               variant="destructive"
-              disabled={loading}
+              disabled={deleting}
               onClick={handleDeleteAccount}
               data-testid="button-close-account"
             >
-              {loading ? "Closing..." : "Close Account"}
+              {deleting ? "Closing..." : "Close Account"}
             </Button>
           </CardContent>
         </Card>

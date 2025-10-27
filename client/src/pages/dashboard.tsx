@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { ApiTokenDialog } from "@/components/api-token-dialog";
 import { Footer } from "@/components/footer";
 import { pb } from "@/lib/pocketbase";
+import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { getApiTokenById } from "@/config/api-tokens";
 import {
@@ -37,23 +38,27 @@ import {
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
-  const [isAuthenticated, setIsAuthenticated] = useState(pb.authStore.isValid);
-  const [apiDialog, setApiDialog] = useState<{ open: boolean; token: string; tokenName: string }>({
+  const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
+  const [apiDialog, setApiDialog] = useState<{
+    open: boolean;
+    token: string;
+    tokenName: string;
+  }>({
     open: false,
-    token: '',
-    tokenName: ''
+    token: "",
+    tokenName: "",
   });
   const { toast } = useToast();
 
   const { data: userData, isLoading } = useQuery({
-    queryKey: ["user", pb.authStore.model?.id],
-    enabled: isAuthenticated,
+    queryKey: ["user", authUser?.id],
+    enabled: isAuthenticated && !authLoading && !!authUser?.id,
     queryFn: async () => {
       try {
-        if (!pb.authStore.model?.id) return null;
+        if (!authUser?.id) return null;
 
         // Get user data
-        const user = await pb.collection('users').getOne(pb.authStore.model.id);
+        const user = await pb.collection("users").getOne(authUser.id);
 
         // Get subscription if exists
         let subscription = null;
@@ -61,7 +66,7 @@ export default function Dashboard() {
           const subscriptions = await pb
             .collection("subscriptions")
             .getList(1, 1, {
-              filter: `userId = "${pb.authStore.model.id}"`,
+              filter: `userId = "${authUser.id}"`,
               sort: "-created",
             });
           if (subscriptions.items.length > 0) {
@@ -72,13 +77,25 @@ export default function Dashboard() {
         }
 
         // Get recently accepted invites (users who signed up with invitedBy = current user)
-        let acceptedInvites: Array<{ id: string; email: string; created: string; name?: string; username?: string }> = [];
+        let acceptedInvites: Array<{
+          id: string;
+          email: string;
+          created: string;
+          name?: string;
+          username?: string;
+        }> = [];
         try {
-          const invitedUsers = await pb.collection('users').getList(1, 5, {
-            filter: `invitedBy = "${pb.authStore.model.id}"`,
-            sort: '-created',
+          const invitedUsers = await pb.collection("users").getList(1, 5, {
+            filter: `invitedBy = "${authUser.id}"`,
+            sort: "-created",
           });
-          acceptedInvites = invitedUsers.items.map((u: any) => ({ id: u.id, email: u.email, created: u.created, name: u.name, username: u.username }));
+          acceptedInvites = invitedUsers.items.map((u: any) => ({
+            id: u.id,
+            email: u.email,
+            created: u.created,
+            name: u.name,
+            username: u.username,
+          }));
         } catch (error) {
           // Ignore if no invited users or field doesn't exist
         }
@@ -95,31 +112,25 @@ export default function Dashboard() {
           },
           subscription: subscription
             ? {
-              id: subscription.id,
-              plan: subscription.plan,
-              status: subscription.status,
-              currentPeriodEnd: subscription.currentPeriodEnd,
-              amount: subscription.amount,
-              trialEnd: subscription.trialEnd,
-            }
+                id: subscription.id,
+                plan: subscription.plan,
+                status: subscription.status,
+                currentPeriodEnd: subscription.currentPeriodEnd,
+                amount: subscription.amount,
+                trialEnd: subscription.trialEnd,
+              }
             : undefined,
           acceptedInvites,
         };
       } catch (e) {
-        console.error('Dashboard data error:', e);
+        console.error("Dashboard data error:", e);
         return null;
       }
     },
   });
 
   useEffect(() => {
-    const unsubscribe = pb.authStore.onChange(() => {
-      const valid = pb.authStore.isValid;
-      setIsAuthenticated(valid);
-      if (!valid) setLocation("/");
-    });
-
-    if (!pb.authStore.isValid) setLocation("/");
+    if (!authLoading && !isAuthenticated) setLocation("/");
 
     // Check for payment success
     const urlParams = new URLSearchParams(window.location.search);
@@ -131,12 +142,13 @@ export default function Dashboard() {
       // Clean up URL
       window.history.replaceState({}, "", "/dashboard");
     }
-    return unsubscribe;
-  }, [setLocation, toast]);
+  }, [authLoading, isAuthenticated, setLocation, toast]);
 
-  if (!isAuthenticated) {
-    return null;
+  if (authLoading) {
+    return <div className="min-h-screen bg-background" />;
   }
+
+  if (!isAuthenticated) return null;
 
   if (isLoading) {
     return (
@@ -157,10 +169,11 @@ export default function Dashboard() {
 
   const user = (userData as any)?.user;
   const subscription = (userData as any)?.subscription;
-  const displayName = (user?.name && String(user.name).trim())
-    || (user?.username && String(user.username).trim())
-    || (user?.email ? String(user.email).split("@")[0] : "")
-    || "User";
+  const displayName =
+    (user?.name && String(user.name).trim()) ||
+    (user?.username && String(user.username).trim()) ||
+    (user?.email ? String(user.email).split("@")[0] : "") ||
+    "User";
 
   // Project metrics (simple illustrative stats)
   const stats = {
@@ -171,7 +184,8 @@ export default function Dashboard() {
   };
 
   // Build recent activity. Pull last invite (if any) from localStorage
-  const lastInviteRaw = typeof window !== 'undefined' ? localStorage.getItem('lastInvite') : null;
+  const lastInviteRaw =
+    typeof window !== "undefined" ? localStorage.getItem("lastInvite") : null;
   let inviteActivity: { email?: string; time?: string } | null = null;
   if (lastInviteRaw) {
     try {
@@ -187,50 +201,77 @@ export default function Dashboard() {
   function timeSince(date: Date) {
     const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
     const intervals: [number, string][] = [
-      [60 * 60 * 24, 'day'],
-      [60 * 60, 'hour'],
-      [60, 'minute'],
+      [60 * 60 * 24, "day"],
+      [60 * 60, "hour"],
+      [60, "minute"],
     ];
     for (const [secs, label] of intervals) {
       const v = Math.floor(seconds / secs);
-      if (v >= 1) return `${v} ${label}${v > 1 ? 's' : ''} ago`;
+      if (v >= 1) return `${v} ${label}${v > 1 ? "s" : ""} ago`;
     }
-    return `${seconds} sec${seconds !== 1 ? 's' : ''} ago`;
+    return `${seconds} sec${seconds !== 1 ? "s" : ""} ago`;
   }
 
-  const accepted = (userData as any)?.acceptedInvites as Array<{ id: string; email: string; created: string; name?: string; username?: string }> | undefined;
+  const accepted = (userData as any)?.acceptedInvites as
+    | Array<{
+        id: string;
+        email: string;
+        created: string;
+        name?: string;
+        username?: string;
+      }>
+    | undefined;
   const acceptedActivities = (accepted || []).map((u) => ({
     icon: UserPlus,
-    title: 'Invite accepted',
-    description: u.email ? `New account: ${u.email}` : 'A user accepted your invite',
+    title: "Invite accepted",
+    description: u.email
+      ? `New account: ${u.email}`
+      : "A user accepted your invite",
     time: timeSince(new Date(u.created)),
-    color: 'text-primary',
+    color: "text-primary",
   }));
 
   const activities = [
     inviteActivity && {
       icon: UserPlus,
       title: "Invite sent",
-      description: inviteActivity.email ? `Invitation sent to ${inviteActivity.email}` : "User invitation sent",
+      description: inviteActivity.email
+        ? `Invitation sent to ${inviteActivity.email}`
+        : "User invitation sent",
       time: inviteActivity.time || "just now",
       color: "text-primary",
     },
     ...acceptedActivities,
     subscription?.status && {
       icon: CreditCard,
-      title: subscription?.status === 'trialing' ? 'Trial started' : 'Subscription active',
-      description: subscription?.plan ? `${subscription.plan} plan` : 'Subscription updated',
-      time: subscription?.currentPeriodEnd ? `${timeSince(new Date(subscription.currentPeriodEnd))}` : undefined,
+      title:
+        subscription?.status === "trialing"
+          ? "Trial started"
+          : "Subscription active",
+      description: subscription?.plan
+        ? `${subscription.plan} plan`
+        : "Subscription updated",
+      time: subscription?.currentPeriodEnd
+        ? `${timeSince(new Date(subscription.currentPeriodEnd))}`
+        : undefined,
       color: "text-secondary",
     },
     {
       icon: Rocket,
       title: "Workspace created",
-      description: displayName ? `${displayName}'s workspace is ready` : 'Workspace initialized',
+      description: displayName
+        ? `${displayName}'s workspace is ready`
+        : "Workspace initialized",
       time: user?.created ? `${timeSince(new Date(user.created))}` : undefined,
       color: "text-accent",
     },
-  ].filter(Boolean) as Array<{ icon: any; title: string; description: string; time?: string; color: string }>;
+  ].filter(Boolean) as Array<{
+    icon: any;
+    title: string;
+    description: string;
+    time?: string;
+    color: string;
+  }>;
 
   const quickActions = [
     {
@@ -239,8 +280,8 @@ export default function Dashboard() {
       href: "/invite",
       onClick: (e: React.MouseEvent) => {
         e.preventDefault();
-        setLocation('/invite');
-      }
+        setLocation("/invite");
+      },
     },
     {
       icon: Key,
@@ -249,23 +290,23 @@ export default function Dashboard() {
       onClick: (e: React.MouseEvent) => {
         e.preventDefault();
         // Get the test API token from configuration
-        const apiToken = getApiTokenById('test-api-token');
+        const apiToken = getApiTokenById("test-api-token");
 
         if (apiToken) {
           setApiDialog({
             open: true,
             token: apiToken.token,
-            tokenName: apiToken.name
+            tokenName: apiToken.name,
           });
         } else {
           // Fallback if no token is configured
           setApiDialog({
             open: true,
-            token: 'sk-test-1234-56789-abcdefghijklmnop',
-            tokenName: 'Test API Token'
+            token: "sk-test-1234-56789-abcdefghijklmnop",
+            tokenName: "Test API Token",
           });
         }
-      }
+      },
     },
     {
       icon: Settings,
@@ -273,13 +314,19 @@ export default function Dashboard() {
       href: "/settings",
       onClick: (e: React.MouseEvent) => {
         e.preventDefault();
-        setLocation('/settings');
-      }
-    }
+        setLocation("/settings");
+      },
+    },
   ];
   // Calculate trial days remaining
   const trialDaysRemaining = subscription?.trialEnd
-    ? Math.max(0, Math.ceil((new Date(subscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(
+        0,
+        Math.ceil(
+          (new Date(subscription.trialEnd).getTime() - Date.now()) /
+            (1000 * 60 * 60 * 24)
+        )
+      )
     : 0;
 
   const trialProgress = subscription?.trialEnd
@@ -315,7 +362,6 @@ export default function Dashboard() {
 
       {/* Dashboard Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
         {/* Subscription Status Card */}
         <Card className="mb-8 shadow-sm">
           <CardContent className="p-8">
@@ -360,16 +406,22 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Next Billing Date</p>
-                    <p className="text-lg font-semibold text-foreground" data-testid="text-next-billing">
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Next Billing Date
+                    </p>
+                    <p
+                      className="text-lg font-semibold text-foreground"
+                      data-testid="text-next-billing"
+                    >
                       {subscription?.currentPeriodEnd
-                        ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })
-                        : 'Not set'
-                      }
+                        ? new Date(
+                            subscription.currentPeriodEnd
+                          ).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })
+                        : "Not set"}
                     </p>
                   </div>
                 </div>
@@ -566,7 +618,10 @@ export default function Dashboard() {
                       key={index}
                       variant="ghost"
                       className="w-full justify-between p-4 h-auto group hover:bg-muted"
-                      data-testid={`button-${action.title.toString().toLowerCase().replace(' ', '-')}`}
+                      data-testid={`button-${action.title
+                        .toString()
+                        .toLowerCase()
+                        .replace(" ", "-")}`}
                       onClick={action.onClick}
                     >
                       <div className="flex items-center space-x-3">
