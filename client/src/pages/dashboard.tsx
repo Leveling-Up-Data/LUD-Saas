@@ -15,17 +15,17 @@ import { ApiTokenDialog } from "@/components/api-token-dialog";
 import { Footer } from "@/components/footer";
 import { pb } from "@/lib/pocketbase";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Users, 
-  Database, 
-  Zap, 
-  TrendingUp, 
-  ArrowUp, 
-  Gift, 
-  UserPlus, 
-  CreditCard, 
-  Rocket, 
-  Shield, 
+import {
+  Users,
+  Database,
+  Zap,
+  TrendingUp,
+  ArrowUp,
+  Gift,
+  UserPlus,
+  CreditCard,
+  Rocket,
+  Shield,
   Bell,
   Settings,
   FileText,
@@ -34,21 +34,23 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+// Dashboard home: subscription/trial status, usage, and quick actions
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [apiDialog, setApiDialog] = useState(false);
   const { toast } = useToast();
 
+  // Fetch the authenticated user's profile and latest subscription (if any)
   const { data: userData, isLoading } = useQuery({
     queryKey: ["user", pb.authStore.model?.id],
     enabled: pb.authStore.isValid,
     queryFn: async () => {
       if (!pb.authStore.model?.id) return null;
 
-      // Get user data
+      // Get user data from PocketBase (auth collection)
       const user = await pb.collection('users').getOne(pb.authStore.model.id);
 
-      // Get subscription if exists
+      // Try to load most recent subscription for this user; it's fine if none exists
       let subscription = null;
       try {
         const subscriptions = await pb
@@ -88,6 +90,7 @@ export default function Dashboard() {
     },
   });
 
+  // On first mount, redirect unauthenticated users and show success toast after Stripe redirect
   useEffect(() => {
     if (!pb.authStore.isValid) {
       setLocation("/");
@@ -130,7 +133,7 @@ export default function Dashboard() {
   const user = (userData as any)?.user;
   const subscription = (userData as any)?.subscription;
 
-  // Mock data for demo
+  // Demo dashboard metrics (replace with real analytics if available)
   const stats = {
     users: 2847,
     storageUsed: 48,
@@ -138,6 +141,7 @@ export default function Dashboard() {
     uptime: 99.9,
   };
 
+  // Demo recent activity feed (replace with real events if available)
   const activities = [
     {
       icon: UserPlus,
@@ -169,6 +173,7 @@ export default function Dashboard() {
     },
   ];
 
+  // Quick actions menu for common tasks
   const quickActions = [
     {
       icon: UserPlus,
@@ -210,11 +215,12 @@ export default function Dashboard() {
       }
     }
   ];
-  // Calculate trial days remaining
+  // Calculate trial days remaining from subscription trial end (if present)
   const trialDaysRemaining = subscription?.trialEnd
     ? Math.max(0, Math.ceil((new Date(subscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
-  
+
+  // Map trial days to a simple 14-day progress bar
   const trialProgress = subscription?.trialEnd
     ? ((14 - trialDaysRemaining) / 14) * 100
     : 0;
