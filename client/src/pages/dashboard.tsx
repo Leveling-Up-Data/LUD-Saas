@@ -16,7 +16,6 @@ import { Footer } from "@/components/footer";
 import { pb } from "@/lib/pocketbase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { getApiTokenById } from "@/config/api-tokens";
 import {
   Users,
   Database,
@@ -36,6 +35,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+// Dashboard home: subscription/trial status, usage, and quick actions
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
@@ -50,6 +50,7 @@ export default function Dashboard() {
   });
   const { toast } = useToast();
 
+  // Fetch the authenticated user's profile and latest subscription (if any)
   const { data: userData, isLoading } = useQuery({
     queryKey: ["user", authUser?.id],
     enabled: isAuthenticated && !authLoading && !!authUser?.id,
@@ -57,36 +58,16 @@ export default function Dashboard() {
       try {
         if (!authUser?.id) return null;
 
-        // Get user data
-        const user = await pb.collection("users").getOne(authUser.id);
+      // Get user data from PocketBase (auth collection)
+      const user = await pb.collection('users').getOne(pb.authStore.model.id);
 
-        // Get subscription if exists
-        let subscription = null;
-        try {
-          const subscriptions = await pb
-            .collection("subscriptions")
-            .getList(1, 1, {
-              filter: `userId = "${authUser.id}"`,
-              sort: "-created",
-            });
-          if (subscriptions.items.length > 0) {
-            subscription = subscriptions.items[0];
-          }
-        } catch (error) {
-          // No subscription found, that's okay
-        }
-
-        // Get recently accepted invites (users who signed up with invitedBy = current user)
-        let acceptedInvites: Array<{
-          id: string;
-          email: string;
-          created: string;
-          name?: string;
-          username?: string;
-        }> = [];
-        try {
-          const invitedUsers = await pb.collection("users").getList(1, 5, {
-            filter: `invitedBy = "${authUser.id}"`,
+      // Try to load most recent subscription for this user; it's fine if none exists
+      let subscription = null;
+      try {
+        const subscriptions = await pb
+          .collection("subscriptions")
+          .getList(1, 1, {
+            filter: `userId = "${pb.authStore.model.id}"`,
             sort: "-created",
           });
           acceptedInvites = invitedUsers.items.map((u: any) => ({
@@ -129,6 +110,7 @@ export default function Dashboard() {
     },
   });
 
+  // On first mount, redirect unauthenticated users and show success toast after Stripe redirect
   useEffect(() => {
     if (!authLoading && !isAuthenticated) setLocation("/");
 
@@ -183,54 +165,7 @@ export default function Dashboard() {
     uptime: 99.99,
   };
 
-  // Build recent activity. Pull last invite (if any) from localStorage
-  const lastInviteRaw =
-    typeof window !== "undefined" ? localStorage.getItem("lastInvite") : null;
-  let inviteActivity: { email?: string; time?: string } | null = null;
-  if (lastInviteRaw) {
-    try {
-      const parsed = JSON.parse(lastInviteRaw);
-      const at = parsed?.at ? new Date(parsed.at) : null;
-      const rel = at ? timeSince(at) : undefined;
-      inviteActivity = { email: parsed?.email, time: rel };
-    } catch (_) {
-      inviteActivity = null;
-    }
-  }
-
-  function timeSince(date: Date) {
-    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-    const intervals: [number, string][] = [
-      [60 * 60 * 24, "day"],
-      [60 * 60, "hour"],
-      [60, "minute"],
-    ];
-    for (const [secs, label] of intervals) {
-      const v = Math.floor(seconds / secs);
-      if (v >= 1) return `${v} ${label}${v > 1 ? "s" : ""} ago`;
-    }
-    return `${seconds} sec${seconds !== 1 ? "s" : ""} ago`;
-  }
-
-  const accepted = (userData as any)?.acceptedInvites as
-    | Array<{
-        id: string;
-        email: string;
-        created: string;
-        name?: string;
-        username?: string;
-      }>
-    | undefined;
-  const acceptedActivities = (accepted || []).map((u) => ({
-    icon: UserPlus,
-    title: "Invite accepted",
-    description: u.email
-      ? `New account: ${u.email}`
-      : "A user accepted your invite",
-    time: timeSince(new Date(u.created)),
-    color: "text-primary",
-  }));
-
+  // Demo recent activity feed (replace with real events if available)
   const activities = [
     inviteActivity && {
       icon: UserPlus,
@@ -273,6 +208,7 @@ export default function Dashboard() {
     color: string;
   }>;
 
+  // Quick actions menu for common tasks
   const quickActions = [
     {
       icon: UserPlus,
@@ -318,7 +254,7 @@ export default function Dashboard() {
       },
     },
   ];
-  // Calculate trial days remaining
+  // Calculate trial days remaining from subscription trial end (if present)
   const trialDaysRemaining = subscription?.trialEnd
     ? Math.max(
         0,
