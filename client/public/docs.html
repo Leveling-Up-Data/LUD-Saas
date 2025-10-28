@@ -1,230 +1,334 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
+  
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PH7SND7H0X"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-PH7SND7H0X');
+  </script>
+  
   <title>API Documentation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <style>
+    :root {
+      --background: hsl(0, 0%, 98%);
+      --foreground: hsl(222, 47%, 11%);
+      --card: hsl(0, 0%, 100%);
+      --card-foreground: hsl(222, 47%, 11%);
+      --muted: hsl(220, 14%, 96%);
+      --muted-foreground: hsl(220, 9%, 46%);
+      --border: hsl(220, 13%, 91%);
+      --primary: hsl(243, 75%, 59%);
+      --primary-foreground: hsl(0, 0%, 100%);
+      --secondary: hsl(258, 90%, 66%);
+      --secondary-foreground: hsl(0, 0%, 100%);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: hsl(222, 84%, 5%);
+        --foreground: hsl(213, 31%, 91%);
+        --card: hsl(222, 84%, 5%);
+        --card-foreground: hsl(213, 31%, 91%);
+        --muted: hsl(223, 47%, 11%);
+        --muted-foreground: hsl(215.4, 16.3%, 56.9%);
+        --border: hsl(223, 47%, 11%);
+        --primary: hsl(243, 75%, 59%);
+        --primary-foreground: hsl(0, 0%, 100%);
+        --secondary: hsl(258, 90%, 66%);
+        --secondary-foreground: hsl(0, 0%, 100%);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
       display: flex;
-      height: 100vh;
-      background-color: #f0f4f8;
-      color: #333;
+      flex-direction: column;
+      min-height: 100vh;
+      background-color: var(--background);
+      color: var(--foreground);
     }
+
+    .app {
+      display: flex;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
     /* Sidebar */
     .sidebar {
-      width: 250px;
-      background: #e2e8f0;
+      width: 260px;
+      background: var(--card);
       padding: 20px;
-      border-right: 1px solid #cbd5e0;
+      border-right: 1px solid var(--border);
       overflow-y: auto;
     }
+
     .sidebar h2 {
-      font-size: 16px;
+      font-size: 12px;
+      letter-spacing: .06em;
       text-transform: uppercase;
       margin-top: 20px;
       margin-bottom: 10px;
-      color: #4a5568;
+      color: var(--muted-foreground);
+      font-weight: 600;
     }
+
     .sidebar a {
       display: block;
       padding: 8px 12px;
-      color: #2d3748;
+      color: var(--foreground);
       text-decoration: none;
-      border-radius: 6px;
-      margin-bottom: 5px;
-      transition: background-color 0.2s ease;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      transition: background-color 0.2s ease, color 0.2s ease;
     }
+
     .sidebar a:hover {
-      background-color: #d1d5db;
+      background-color: var(--muted);
+      color: var(--foreground);
     }
+
     /* Main content */
     .content {
       flex: 1;
-      padding: 30px;
+      padding: 32px;
       overflow-y: auto;
     }
+
     h1 {
-      color: #2d3748;
-      margin-bottom: 30px;
+      color: var(--foreground);
+      margin-bottom: 24px;
+      font-size: 28px;
+      font-weight: 700;
     }
+
     h2 {
-      margin-top: 50px;
-      color: #2d3748;
+      margin-top: 40px;
+      color: var(--foreground);
+      font-size: 20px;
     }
+
     .section {
-      margin-bottom: 40px;
-      background-color: #fff;
+      margin-bottom: 24px;
+      background-color: var(--card);
       padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     }
+
     .method {
       display: inline-block;
-      padding: 5px 10px;
-      border-radius: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
       font-size: 12px;
-      font-weight: bold;
-      color: white;
+      font-weight: 700;
+      color: var(--primary-foreground);
       margin-right: 10px;
     }
-    .GET { background: #38a169; }
-    .POST { background: #3182ce; }
+
+    .GET {
+      background: #22c55e;
+    }
+
+    .POST {
+      background: #3b82f6;
+    }
+
     pre {
-      background: #edf2f7;
-      color: #2d3748;
-      padding: 15px;
-      border-radius: 6px;
+      background: var(--muted);
+      color: var(--foreground);
+      padding: 16px;
+      border-radius: 8px;
       overflow-x: auto;
       font-size: 14px;
     }
+
     code {
-      background: #e2e8f0;
+      background: var(--muted);
       padding: 3px 6px;
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: 14px;
     }
-    
+
+    a.inline {
+      color: var(--primary);
+    }
+
     .section {
       display: none;
     }
+
     .section:target {
       display: block;
     }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      background: var(--card);
+      color: var(--muted-foreground);
+      padding: 16px 24px;
+      text-align: center;
+      font-size: 14px;
+    }
   </style>
 </head>
+
 <body>
-  <div class="sidebar">
-    <h2>PDF Processing</h2>
-    <a href="#pdf">Extract PDF</a>
-    <a href="#check-pdf">Check PDF</a>
-    <a href="#ask-pdf">Ask PDF</a>
-    <h2>Verification</h2>
-    <a href="#message-verify">Message Verify</a>
-    <a href="#form-verify">Form Verify</a>
-    <h2>System</h2>
-    <a href="#health">Health</a>
-  </div>
+  <div class="app">
+    <div class="sidebar">
+      <h2>PDF Processing</h2>
+      <a href="#pdf">Extract PDF</a>
+      <a href="#check-pdf">Check PDF</a>
+      <a href="#ask-pdf">Ask PDF</a>
+      <h2>Verification</h2>
+      <a href="#message-verify">Message Verify</a>
+      <a href="#form-verify">Form Verify</a>
+      <h2>System</h2>
+      <a href="#health">Health</a>
+    </div>
 
-  <div class="content">
-    <h1>API Documentation</h1>
+    <div class="content">
+      <h1>API Documentation</h1>
 
-    
-    <h2>PDF Processing</h2>
-    <p>
-      Endpoints for uploading and analyzing PDF/DOCX files.  
 
-      Supports text extraction, encryption checks, PDF/DOCX processing, and asking natural language questions about the content.
-    </p>
+      <h2>PDF Processing</h2>
+      <p>
+        Endpoints for uploading and analyzing PDF/DOCX files.
 
-    <div id="pdf" class="section">
-      <span class="method POST">POST</span> <code>/pdf</code>
-      <p><b>Extract PDF:</b> Upload a PDF/DOCX file and extract its text or images.  
-      Automatically applies PDF/DOCX processing if the document is scanned or encrypted.</p>
-      <h3>Example</h3>
-      <pre>
+        Supports text extraction, encryption checks, PDF/DOCX processing, and asking natural language questions about
+        the content.
+      </p>
+
+      <div id="pdf" class="section">
+        <span class="method POST">POST</span> <code>/pdf</code>
+        <p><b>Extract PDF:</b> Upload a PDF/DOCX file and extract its text or images.
+          Automatically applies PDF/DOCX processing if the document is scanned or encrypted.</p>
+        <h3>Example</h3>
+        <pre>
 curl -X POST "http://localhost:8000/pdf" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -F "file=@example.pdf" \
   -F "dpi=150" \
   -F "extract_images=true"
       </pre>
-      <h3>Response</h3>
-      <pre>{
+        <h3>Response</h3>
+        <pre>{
   "status": "success",
   "text": "Extracted text content ...",
   "results": null,
   "message": null
 }</pre>
-    </div>
+      </div>
 
-    <div id="check-pdf" class="section">
-      <span class="method POST">POST</span> <code>/check-pdf</code>
-      <p><b>Check PDF:</b> Quickly determine if a PDF is encrypted, requires PDF/DOCX processing,  
-      and get a sample of extracted text for verification.</p>
-      <h3>Example</h3>
-      <pre>
+      <div id="check-pdf" class="section">
+        <span class="method POST">POST</span> <code>/check-pdf</code>
+        <p><b>Check PDF:</b> Quickly determine if a PDF is encrypted, requires PDF/DOCX processing,
+          and get a sample of extracted text for verification.</p>
+        <h3>Example</h3>
+        <pre>
 curl -X POST "http://localhost:8000/check-pdf" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -F "file=@example.pdf"
       </pre>
-      <h3>Response</h3>
-      <pre>{
+        <h3>Response</h3>
+        <pre>{
   "isEncrypted": false,
   "requiresPDFProcessing": false,
   "sampleText": "Hello World..."
 }</pre>
-    </div>
+      </div>
 
-    <div id="ask-pdf" class="section">
-      <span class="method POST">POST</span> <code>/ask-pdf</code>
-      <p><b>Ask PDF:</b> Send natural language queries to extract semantic answers from the document.  
-      Useful for summaries, Q&A, and searching within content.</p>
-      <h3>Example</h3>
-      <pre>
+      <div id="ask-pdf" class="section">
+        <span class="method POST">POST</span> <code>/ask-pdf</code>
+        <p><b>Ask PDF:</b> Send natural language queries to extract semantic answers from the document.
+          Useful for summaries, Q&A, and searching within content.</p>
+        <h3>Example</h3>
+        <pre>
 curl -X POST "http://localhost:8000/ask-pdf" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -F "file=@example.pdf" \
   -F "question=What is the summary of this pdf?"
       </pre>
-      <h3>Response</h3>
-      <pre>{
+        <h3>Response</h3>
+        <pre>{
   "status": "success",
   "summary": "This is a summary of the PDF content..."
-}</pre>    
-    </div>
+}</pre>
+      </div>
 
-    
 
-    <div id="message-verify" class="section">
-      <span class="method POST">POST</span> <code>/message-verify</code>
-      <p><b>Message Verify:</b> Ensures requests truly originate from Slack by validating signatures and timestamps.</p>
-      <h3>Example</h3>
-      <pre>
+
+      <div id="message-verify" class="section">
+        <span class="method POST">POST</span> <code>/message-verify</code>
+        <p><b>Message Verify:</b> Ensures requests truly originate from Slack by validating signatures and timestamps.
+        </p>
+        <h3>Example</h3>
+        <pre>
 curl -X POST "http://localhost:8000/message-verify" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello from Slack!", "timestamp": "2024-06-01T12:00:00Z"}'
       </pre>
-      <h3>Response</h3>
-      <pre>{
+        <h3>Response</h3>
+        <pre>{
   "status": "verified",
   "message": "Request is authentic."
 }</pre>
-    </div>
+      </div>
 
-    <div id="form-verify" class="section">
-      <span class="method POST">POST</span> <code>/form-verify</code>
-      <p><b>Form Verify:</b> Confirms that form submissions are genuine before they’re stored or processed.  
-      Prevents malicious or fake inputs.</p>
-      <h3>Example</h3>
-      <pre>
+      <div id="form-verify" class="section">
+        <span class="method POST">POST</span> <code>/form-verify</code>
+        <p><b>Form Verify:</b> Confirms that form submissions are genuine before they’re stored or processed.
+          Prevents malicious or fake inputs.</p>
+        <h3>Example</h3>
+        <pre>
 curl -X POST "http://localhost:8000/form-verify" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"form_data": {"name": "John Doe", "email": "john@example.com"}, "timestamp": "2024-06-01T12:00:00Z"}'
       </pre>
-      <h3>Response</h3>
-      <pre>{
+        <h3>Response</h3>
+        <pre>{
   "status": "verified",
   "message": "Form submission is authentic."
 }</pre>
+      </div>
+
+
+
+      <div id="health" class="section">
+        <span class="method GET">GET</span> <code>/health</code>
+        <p><b>Health Check:</b> Returns a simple command confirming the API is online and healthy.</p>
+        <h3>Example</h3>
+        <pre>curl http://localhost:8000/health</pre>
+        <h3>Response</h3>
+        <pre>{ "status": "ok" }</pre>
+      </div>
+
     </div>
-
-    
-
-    <div id="health" class="section">
-      <span class="method GET">GET</span> <code>/health</code>
-      <p><b>Health Check:</b> Returns a simple command confirming the API is online and healthy.</p>
-      <h3>Example</h3>
-      <pre>curl http://localhost:8000/health</pre>
-      <h3>Response</h3>
-      <pre>{ "status": "ok" }</pre>
-    </div>
-
   </div>
+  <footer>
+    © Starfish - <span id="year"></span> All Rights Reserved.
+  </footer>
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
 </body>
+
 </html>
-
-

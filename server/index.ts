@@ -1,29 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
-import * as Sentry from "@sentry/node";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
 
-// Initialize Sentry with profiling
-Sentry.init({
-  dsn: process.env.SENTRY_DSN || "https://a6c9e23b8ebe380495ffb8991a6541e6@log.levelingupdata.com/3",
-  environment: process.env.NODE_ENV || "development",
-  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-  profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-  integrations: [
-    Sentry.expressIntegration(),
-    Sentry.httpIntegration(),
-    Sentry.nativeNodeFetchIntegration(),
-  ],
-  beforeSend(event: any) {
-    // Filter out sensitive data
-    if (event.request?.data) {
-      delete (event.request.data as any).password;
-      delete (event.request.data as any).token;
-      delete (event.request.data as any).secret;
-    }
-    return event;
-  },
-});
+// Optional Sentry (disabled if dependency missing)
+let Sentry: any = null;
 
 const app = express();
 
@@ -64,7 +43,7 @@ app.use((req, res, next) => {
         logLine = logLine.slice(0, 79) + "…";
       }
 
-      log(logLine);
+      console.log(logLine);
     }
   });
 
@@ -72,10 +51,39 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Try to enable Sentry if available
+  try {
+    const mod = await import("@sentry/node");
+    Sentry = mod;
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN || "https://a6c9e23b8ebe380495ffb8991a6541e6@log.levelingupdata.com/3",
+      environment: process.env.NODE_ENV || "development",
+      tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+      profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+      integrations: [
+        Sentry.expressIntegration(),
+        Sentry.httpIntegration(),
+        Sentry.nativeNodeFetchIntegration(),
+      ],
+      beforeSend(event: any) {
+        if (event.request?.data) {
+          delete (event.request.data as any).password;
+          delete (event.request.data as any).token;
+          delete (event.request.data as any).secret;
+        }
+        return event;
+      },
+    });
+  } catch (e: any) {
+    console.warn("Sentry is not installed; continuing without Sentry.");
+  }
+
   const server = await registerRoutes(app);
 
   // Sentry error handler must be before any other error middleware
-  app.use(Sentry.expressErrorHandler());
+  if (Sentry?.expressErrorHandler) {
+    app.use(Sentry.expressErrorHandler());
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -110,6 +118,12 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    const formattedTime = new Date().toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+    console.log(`${formattedTime} [express] serving on port ${port}`);
   });
 })();

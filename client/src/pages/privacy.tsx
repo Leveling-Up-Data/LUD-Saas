@@ -37,12 +37,12 @@ export default function Privacy() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-2xl font-bold text-foreground">
-                                PRIVACY POLICY FOR LEVELING UP DATA!
+                                PRIVACY POLICY FOR Starfish!
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                This privacy policy outlines the types of information collected and how it's used by Leveling Up Data!,
+                                This privacy policy outlines the types of information collected and how it's used by Starfish!,
                                 accessible from <a href="https://levelingupdata.com/" className="text-primary hover:underline">https://levelingupdata.com/</a>.
                             </p>
                             <p className="text-muted-foreground">
@@ -67,7 +67,7 @@ export default function Privacy() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                Leveling Up Data! follows a standard procedure of using log files. These files log visitors when they visit websites.
+                                Starfish! follows a standard procedure of using log files. These files log visitors when they visit websites.
                                 All hosting companies do this and a part of hosting services' analytics. The information collected by log files include:
                             </p>
                             <ul className="space-y-2 text-muted-foreground ml-4">
@@ -97,7 +97,7 @@ export default function Privacy() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                Like any other website, Leveling Up Data! uses 'cookies'. These cookies are used to store information including visitors'
+                                Like any other website, Starfish! uses 'cookies'. These cookies are used to store information including visitors'
                                 preferences, and the pages on the website that the visitor accessed or visited. The information is used to optimize the users'
                                 experience by customizing our web page content based on visitors' browser type and/or other information.
                             </p>
@@ -163,16 +163,16 @@ export default function Privacy() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                You may consult this list to find the Privacy Policy for each of the advertising partners of Leveling Up Data!.
+                                You may consult this list to find the Privacy Policy for each of the advertising partners of Starfish!.
                             </p>
                             <p className="text-muted-foreground">
                                 Third-party ad servers or ad networks uses technologies like cookies, JavaScript, or Web Beacons that are used in their
-                                respective advertisements and links that appear on Leveling Up Data!, which are sent directly to users' browser. They automatically
+                                respective advertisements and links that appear on Starfish!, which are sent directly to users' browser. They automatically
                                 receive your IP address when this occurs. These technologies are used to measure the effectiveness of their advertising campaigns
                                 and/or to personalize the advertising content that you see on websites that you visit.
                             </p>
                             <p className="text-muted-foreground">
-                                Note that Leveling Up Data! has no access to or control over these cookies that are used by third-party advertisers.
+                                Note that Starfish! has no access to or control over these cookies that are used by third-party advertisers.
                             </p>
                         </CardContent>
                     </Card>
@@ -189,7 +189,7 @@ export default function Privacy() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
-                                Leveling Up Data!'s Privacy Policy does not apply to other advertisers or websites. Thus, we are advising you to consult the
+                                Starfish!'s Privacy Policy does not apply to other advertisers or websites. Thus, we are advising you to consult the
                                 respective Privacy Policies of these third-party ad servers for more detailed information. It may include their practices and
                                 instructions about how to opt-out of certain options.
                             </p>
@@ -216,7 +216,7 @@ export default function Privacy() {
                                 observe, participate in, and/or monitor and guide their online activity.
                             </p>
                             <p className="text-muted-foreground">
-                                Leveling Up Data! does not knowingly collect any Personal Identifiable Information from children under the age of 13. If you think
+                                Starfish! does not knowingly collect any Personal Identifiable Information from children under the age of 13. If you think
                                 that your child provided this kind of information on our website, we strongly encourage you to contact us immediately and we will
                                 do our best efforts to promptly remove such information from our records.
                             </p>
@@ -236,7 +236,7 @@ export default function Privacy() {
                         <CardContent className="space-y-4">
                             <p className="text-muted-foreground">
                                 This Privacy Policy applies only to our online activities and is valid for visitors to our website with regards to the information
-                                that they shared and/or collect in Leveling Up Data!. This policy is not applicable to any information collected offline or via
+                                that they shared and/or collect in Starfish!. This policy is not applicable to any information collected offline or via
                                 channels other than this website.
                             </p>
                         </CardContent>

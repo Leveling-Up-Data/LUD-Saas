@@ -183,6 +183,21 @@ export default function Pricing() {
               </div>
             </div>
           </div>
+
+          {/* Contact Us Section */}
+          <div className="mt-20 text-center">
+            <h3 className="text-3xl font-bold text-foreground mb-4">Need help choosing a plan?</h3>
+            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Our team is here to help you find the perfect solution for your business needs.
+            </p>
+            <Button
+              size="lg"
+              onClick={() => setLocation('/contact')}
+              className="px-8 py-3 text-lg"
+            >
+              Contact Us
+            </Button>
+          </div>
         </div>
       </section>
 

@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { storage } from "./storage";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
+import nodemailer from "nodemailer";
 
 // Initialize Stripe if API key is available
 let stripe: Stripe | null = null;
@@ -24,10 +25,93 @@ const loginSchema = z.object({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  
+
   // Health check endpoint
   app.get('/api/health', (req, res) => {
     res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+  });
+
+  // Email endpoints using your SMTP credentials
+  const smtpConfig = {
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: 'atom@levelingupdata.com',
+      pass: 'tblmdineodbegxge'
+    }
+  };
+
+  const transporter = nodemailer.createTransporter(smtpConfig);
+
+  // Contact email endpoint
+  app.post('/api/send-contact-email', async (req, res) => {
+    try {
+      const { username, email, subject, message } = req.body;
+
+      const mailOptions = {
+        from: 'hello@levelingupdata.com',
+        to: email,
+        subject: `We received your message: ${subject}`,
+        text: `Hi ${username},\n\nThanks for contacting us! We've received your message and our team will get back to you shortly.\n\nSubject: ${subject}\n\nMessage:\n${message}\n\nBest regards,\nStarfish Support`,
+        html: `
+          <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height:1.6; color:#111827;">
+            <h2 style="margin:0 0 12px;">Thanks, we received your message</h2>
+            <p style="margin:0 0 12px;">Hi <strong>${username}</strong>,</p>
+            <p style="margin:0 0 12px;">We've received your message and our team will get back to you shortly.</p>
+            <div style="margin:16px 0; padding:12px; background:#F3F4F6; border-radius:8px;">
+              <div style="font-weight:600; margin-bottom:6px;">Subject:</div>
+              <div>${subject}</div>
+              <div style="font-weight:600; margin:12px 0 6px;">Message:</div>
+              <div style="white-space:pre-wrap;">${message.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            </div>
+            <p style="margin:12px 0 0;">Best regards,<br/>Starfish Support</p>
+          </div>
+        `
+      };
+
+      await transporter.sendMail(mailOptions);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Contact email error:', error);
+      res.status(500).json({ error: 'Failed to send email' });
+    }
+  });
+
+  // Invite email endpoint
+  app.post('/api/send-invite-email', async (req, res) => {
+    try {
+      const { email } = req.body;
+      const loginUrl = 'https://starfish.levelingupdata.com/';
+
+      const mailOptions = {
+        from: 'hello@levelingupdata.com',
+        to: email,
+        subject: `You're invited to join`,
+        text: `You've been invited. Click the link to sign up or log in: ${loginUrl}`,
+        html: `
+          <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height:1.6;">
+            <h2>You're invited</h2>
+            <p>You have been invited.</p>
+            <p>
+              <a href="${loginUrl}"
+                 style="display:inline-block;background:#111827;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">
+                Open Login / Signup
+              </a>
+            </p>
+            <p>If the button doesn't work, copy and paste this URL into your browser:<br/>
+              <a href="${loginUrl}">${loginUrl}</a>
+            </p>
+          </div>
+        `
+      };
+
+      await transporter.sendMail(mailOptions);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Invite email error:', error);
+      res.status(500).json({ error: 'Failed to send email' });
+    }
   });
 
   // Products endpoint (fallback if PocketBase is not available)
@@ -61,7 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         priority: 3
       }
     ];
-    
+
     res.json(products);
   });
 
@@ -78,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const sig = req.headers['stripe-signature'] as string;
-    
+
     try {
       const event = stripe.webhooks.constructEvent(
         req.rawBody as Buffer,
@@ -89,38 +173,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       switch (event.type) {
         case 'customer.subscription.updated':
         case 'customer.subscription.deleted':
-          const subscription = event.data.object as Stripe.Subscription;
-          
-          // Update subscription in database
-          const dbSubscription = await storage.getSubscriptionByStripeId(subscription.id);
+          // Stripe types can vary across API versions; use a safe accessor
+          const subObj: any = event.data.object as any;
+          const currentPeriodEndUnix: number | undefined = typeof subObj?.current_period_end === 'number' ? subObj.current_period_end : undefined;
+
+          const dbSubscription = await storage.getSubscriptionByStripeId(String(subObj.id));
           if (dbSubscription) {
             await storage.updateSubscription(dbSubscription.id, {
-              status: subscription.status,
-              currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+              status: String(subObj.status || dbSubscription.status),
+              currentPeriodEnd: currentPeriodEndUnix ? new Date(currentPeriodEndUnix * 1000) : dbSubscription.currentPeriodEnd,
             });
           }
           break;
 
         case 'invoice.payment_succeeded':
-          const invoice = event.data.object as Stripe.Invoice;
-          if (invoice.subscription && typeof invoice.subscription === 'string') {
-            const sub = await storage.getSubscriptionByStripeId(invoice.subscription);
-            if (sub) {
-              await storage.updateSubscription(sub.id, {
-                status: 'active'
-              });
+          {
+            const invoiceObj: any = event.data.object as any;
+            if (invoiceObj?.subscription && typeof invoiceObj.subscription === 'string') {
+              const sub = await storage.getSubscriptionByStripeId(invoiceObj.subscription);
+              if (sub) {
+                await storage.updateSubscription(sub.id, {
+                  status: 'active'
+                });
+              }
             }
           }
           break;
 
         case 'invoice.payment_failed':
-          const failedInvoice = event.data.object as Stripe.Invoice;
-          if (failedInvoice.subscription && typeof failedInvoice.subscription === 'string') {
-            const sub = await storage.getSubscriptionByStripeId(failedInvoice.subscription);
-            if (sub) {
-              await storage.updateSubscription(sub.id, {
-                status: 'past_due'
-              });
+          {
+            const failedInvoiceObj: any = event.data.object as any;
+            if (failedInvoiceObj?.subscription && typeof failedInvoiceObj.subscription === 'string') {
+              const sub = await storage.getSubscriptionByStripeId(failedInvoiceObj.subscription);
+              if (sub) {
+                await storage.updateSubscription(sub.id, {
+                  status: 'past_due'
+                });
+              }
             }
           }
           break;
