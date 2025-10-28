@@ -36,7 +36,6 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-// Dashboard home: subscription/trial status, usage, and quick actions
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
@@ -52,7 +51,6 @@ export default function Dashboard() {
   // Small modal used to surface the user's API token (read-only)
   const { toast } = useToast();
 
-  // Fetch the authenticated user's profile and latest subscription (if any)
   const { data: userData, isLoading } = useQuery({
     // Invalidate user data whenever the authenticated user's id changes
     queryKey: ["user", authUser?.id],
@@ -78,12 +76,18 @@ export default function Dashboard() {
           if (subscriptions.items.length > 0) {
             subscription = subscriptions.items[0];
           }
-        } catch (_) {
-          // No subscription found
+        } catch (error) {
+          // No subscription found, that's okay
         }
 
-        // Recently accepted invites (users who signed up with invitedBy = current user)
-        let acceptedInvites: Array<{ id: string; email: string; created: string; name?: string; username?: string; }> = [];
+        // Get recently accepted invites (users who signed up with invitedBy = current user)
+        let acceptedInvites: Array<{
+          id: string;
+          email: string;
+          created: string;
+          name?: string;
+          username?: string;
+        }> = [];
         try {
           const invitedUsers = await pb.collection("users").getList(1, 5, {
             filter: `invitedBy = "${authUser.id}"`,
@@ -130,7 +134,6 @@ export default function Dashboard() {
     },
   });
 
-  // On first mount, redirect unauthenticated users and show success toast after Stripe redirect
   useEffect(() => {
     if (!authLoading && !isAuthenticated) setLocation("/");
 
@@ -227,7 +230,54 @@ export default function Dashboard() {
     uptime: 99.99,
   };
 
-  // Demo recent activity feed (replace with real events if available)
+  // Build recent activity. Pull last invite (if any) from localStorage
+  const lastInviteRaw =
+    typeof window !== "undefined" ? localStorage.getItem("lastInvite") : null;
+  let inviteActivity: { email?: string; time?: string } | null = null;
+  if (lastInviteRaw) {
+    try {
+      const parsed = JSON.parse(lastInviteRaw);
+      const at = parsed?.at ? new Date(parsed.at) : null;
+      const rel = at ? timeSince(at) : undefined;
+      inviteActivity = { email: parsed?.email, time: rel };
+    } catch (_) {
+      inviteActivity = null;
+    }
+  }
+
+  function timeSince(date: Date) {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    const intervals: [number, string][] = [
+      [60 * 60 * 24, "day"],
+      [60 * 60, "hour"],
+      [60, "minute"],
+    ];
+    for (const [secs, label] of intervals) {
+      const v = Math.floor(seconds / secs);
+      if (v >= 1) return `${v} ${label}${v > 1 ? "s" : ""} ago`;
+    }
+    return `${seconds} sec${seconds !== 1 ? "s" : ""} ago`;
+  }
+
+  const accepted = (userData as any)?.acceptedInvites as
+    | Array<{
+        id: string;
+        email: string;
+        created: string;
+        name?: string;
+        username?: string;
+      }>
+    | undefined;
+  const acceptedActivities = (accepted || []).map((u) => ({
+    icon: UserPlus,
+    title: "Invite accepted",
+    description: u.email
+      ? `New account: ${u.email}`
+      : "A user accepted your invite",
+    time: timeSince(new Date(u.created)),
+    color: "text-primary",
+  }));
+
   const activities = [
     inviteActivity && {
       icon: UserPlus,
@@ -270,7 +320,6 @@ export default function Dashboard() {
     color: string;
   }>;
 
-  // Quick actions menu for common tasks
   const quickActions = [
     {
       icon: UserPlus,
@@ -316,7 +365,7 @@ export default function Dashboard() {
       },
     },
   ];
-  // Calculate trial days remaining from subscription trial end (if present)
+  // Calculate trial days remaining
   const trialDaysRemaining = subscription?.trialEnd
     ? Math.max(
       0,
