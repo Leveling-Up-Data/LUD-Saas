@@ -10,6 +10,7 @@ onRecordBeforeCreate('user_tokens', (e) => {
     e.record.set('user_id', e.authRecord.id);
   }
 
+  
   // Default token_name if not provided
   if (!e.record.get('token_name') || typeof e.record.get('token_name') !== 'string') {
     e.record.set('token_name', 'default');
