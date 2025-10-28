@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Box, Menu, Star, X } from "lucide-react";
 import { AuthModal } from "./auth-modal";
@@ -18,13 +18,19 @@ export function Navbar() {
     mode: "signup",
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [apiDialog, setApiDialog] = useState<{ open: boolean; token: string; tokenName: string }>({
+  const [apiDialog, setApiDialog] = useState<{
+    open: boolean;
+    token: string;
+    tokenName: string;
+  }>({
     open: false,
-    token: '',
-    tokenName: ''
+    token: "",
+    tokenName: "",
   });
 
   const { user, isAuthenticated, signOut, loading } = useAuth();
+  const [location] = useLocation();
+  const showDocs = isAuthenticated || location !== "/";
 
   const handleSignOut = () => {
     signOut();
@@ -33,20 +39,20 @@ export function Navbar() {
 
   const handleApiClick = () => {
     // Get the main API token from configuration
-    const apiToken = getApiTokenById('main-api-token');
+    const apiToken = getApiTokenById("main-api-token");
 
     if (apiToken) {
       setApiDialog({
         open: true,
         token: apiToken.token,
-        tokenName: apiToken.name
+        tokenName: apiToken.name,
       });
     } else {
       // Fallback if no token is configured
       setApiDialog({
         open: true,
-        token: 'sk-demo-token-1234567890abcdef',
-        tokenName: 'Demo API Token'
+        token: "sk-demo-token-1234567890abcdef",
+        tokenName: "Demo API Token",
       });
     }
   };
@@ -72,10 +78,18 @@ export function Navbar() {
               >
                 Pricing
               </Link>
-              <Link to="/docs" className="text-muted-foreground hover:text-foreground transition">
-                Docs
-              </Link>
-              <Link to="/products" className="text-muted-foreground hover:text-foreground transition">
+              {showDocs && (
+                <Link
+                  to="/docs"
+                  className="text-muted-foreground hover:text-foreground transition"
+                >
+                  Docs
+                </Link>
+              )}
+              <Link
+                to="/products"
+                className="text-muted-foreground hover:text-foreground transition"
+              >
                 Products
               </Link>
               {loading ? (
@@ -85,7 +99,10 @@ export function Navbar() {
                 </div>
               ) : (
                 isAuthenticated && (
-                  <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition">
+                  <Link
+                    to="/dashboard"
+                    className="text-muted-foreground hover:text-foreground transition"
+                  >
                     Dashboard
                   </Link>
                 )
@@ -100,7 +117,10 @@ export function Navbar() {
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-3">
                     <Link to="/settings">
-                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-semibold cursor-pointer" title="Account settings">
+                      <div
+                        className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-semibold cursor-pointer"
+                        title="Account settings"
+                      >
                         {user?.name?.charAt(0) || "U"}
                       </div>
                     </Link>
@@ -117,14 +137,14 @@ export function Navbar() {
                 <>
                   <Button
                     variant="ghost"
-                    onClick={() => setAuthModal({ open: true, mode: 'signin' })}
+                    onClick={() => setAuthModal({ open: true, mode: "signin" })}
                     className="text-muted-foreground hover:text-foreground"
                     data-testid="button-signin"
                   >
                     Sign In
                   </Button>
                   <Button
-                    onClick={() => setAuthModal({ open: true, mode: 'signup' })}
+                    onClick={() => setAuthModal({ open: true, mode: "signup" })}
                     className="bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90"
                     data-testid="button-signup"
                   >
@@ -154,18 +174,32 @@ export function Navbar() {
               >
                 Pricing
               </Link>
-              <Link to="/docs" className="block py-2 text-muted-foreground hover:text-foreground transition">
-                Docs
-              </Link>
-              <Link to="/products" className="block py-2 text-muted-foreground hover:text-foreground transition">
+              {showDocs && (
+                <Link
+                  to="/docs"
+                  className="block py-2 text-muted-foreground hover:text-foreground transition"
+                >
+                  Docs
+                </Link>
+              )}
+              <Link
+                to="/products"
+                className="block py-2 text-muted-foreground hover:text-foreground transition"
+              >
                 Products
               </Link>
               {isAuthenticated && (
-                <Link to="/dashboard" className="block py-2 text-muted-foreground hover:text-foreground transition">
+                <Link
+                  to="/dashboard"
+                  className="block py-2 text-muted-foreground hover:text-foreground transition"
+                >
                   Dashboard
                 </Link>
               )}
-              <Link to="/support" className="block py-2 text-muted-foreground hover:text-foreground transition">
+              <Link
+                to="/support"
+                className="block py-2 text-muted-foreground hover:text-foreground transition"
+              >
                 Support
               </Link>
               <button
@@ -192,13 +226,13 @@ export function Navbar() {
               ) : (
                 <div className="pt-2 space-y-2">
                   <button
-                    onClick={() => setAuthModal({ open: true, mode: 'signin' })}
+                    onClick={() => setAuthModal({ open: true, mode: "signin" })}
                     className="block w-full text-left py-2 text-muted-foreground hover:text-foreground transition"
                   >
                     Sign In
                   </button>
                   <button
-                    onClick={() => setAuthModal({ open: true, mode: 'signup' })}
+                    onClick={() => setAuthModal({ open: true, mode: "signup" })}
                     className="block w-full text-left py-2 text-primary font-medium"
                   >
                     Get Started
