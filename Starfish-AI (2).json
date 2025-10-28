@@ -1,0 +1,4950 @@
+{
+  "name": "Starfish-AI",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fd974258-c6c1-47bf-afae-eae179025457",
+              "leftValue": "={{ $json.body.event.files[0].mimetype }}",
+              "rightValue": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "7aeecf06-62c4-46b4-b0f5-e6758b697e13",
+              "leftValue": "={{ $json.body.event.files[0].mimetype }}",
+              "rightValue": "text/csv",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "53fcae16-6af6-45de-9ff9-3083b28a8c1c",
+              "leftValue": "={{ $json.body.event.files[0].mimetype }}",
+              "rightValue": "application/vnd.ms-excel",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "97318356-52a3-4583-ab38-7f7fee774a4a",
+              "leftValue": "={{ $json.body.event.files[0].mimetype }}",
+              "rightValue": "application/msword",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "4b1cdcc2-0213-451a-b717-dc515e989478",
+              "leftValue": "={{ $json.body.event.files[0].mimetype }}",
+              "rightValue": "application/rtf",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "faaf58d6-c467-456b-aba6-e9b468bfad0d",
+              "leftValue": "={{ $('Slack webhook').item.json.body.event.files[0].mimetype }}",
+              "rightValue": "text/plain",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "cebf39f7-5e3b-4f45-8589-59ac29dcdcb2",
+              "leftValue": "={{ $('Slack webhook').item.json.body.event.files[0].mimetype }}",
+              "rightValue": "application/pdf",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1488,
+        2144
+      ],
+      "id": "bdc26701-812e-4914-9024-2d619162a9f6",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "selectFile",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1312,
+        -1728
+      ],
+      "id": "25b24df5-507e-45ac-bfd9-47e37d424404",
+      "name": "Webhook",
+      "webhookId": "b4156b70-47f1-45f8-b58c-5695f2213adc",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the matchedFiles array and channelId from previous node\nconst matchedFiles = items[0].json.matchedFiles || [];\nconst channelId = items[0].json.channelId || \"\";\n\n// Map of file extensions → emoji\nconst fileEmoji = {\n  pdf: \"📕\",\n  doc: \"📘\",\n  docx: \"📘\",\n  txt: \"📄\",\n  csv: \"📊\"\n};\n\n// Helper: pick emoji based on file name\nconst getEmoji = (filename = \"\") => {\n  const ext = filename.split(\".\").pop().toLowerCase();\n  return fileEmoji[ext] || \"📄\"; // default 📄 if not matched\n};\n\nlet blocks = [\n  {\n    type: \"section\",\n    text: { type: \"mrkdwn\", text: \"*Select a file from Google Drive to run RAG:*\" }\n  },\n  { type: \"divider\" }\n];\n\n// Build block for each file, but keep total blocks <= 50\nfor (let i = 0; i < matchedFiles.length; i++) {\n  if (blocks.length >= 50) break; // stop once 50 blocks reached\n\n  const file = matchedFiles[i];\n  const emoji = getEmoji(file.name);\n\n  blocks.push({\n    type: \"section\",\n    text: { type: \"mrkdwn\", text: `${emoji} ${file.name}` }\n  });\n\n  if (blocks.length < 50) {  // only add actions block if still under limit\n    blocks.push({\n      type: \"actions\",\n      elements: [\n        {\n          type: \"button\",\n          text: { type: \"plain_text\", text: \"Select\", emoji: true },\n          value: file.id\n        }\n      ]\n    });\n  }\n}\n\nreturn [{\n  json: {\n    blocks,\n    channelId // Pass it forward for use in HTTP Request node\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        -1584
+      ],
+      "id": "d4e4dbf4-1c53-499b-aa06-200ccc348125",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('AuthoriserNode4').item.json.bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $('Name matching').item.json.channelId }}\",\n  \"text\": \"Select a file from Google Drive to run RAG\",\n  \"blocks\": {{ JSON.stringify($('Code1').item.json.blocks) }}\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1648,
+        -1600
+      ],
+      "id": "da933ec6-0e37-4f3d-b1e8-17f676a4b121",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Read query and drive file list from current item\nconst query = $('Webhook').first().json.body.text || \"\";\nconst channelId = $('Webhook').first().json.body.channel_id || \"\";\nconst files = $input.all().map(item => item.json).filter(f => f && f.name) || [];\nconst teamid = $('Webhook').first().json.body.team_id;\n\n// ---------- Helper fns ----------\nconst escapeRegExp = s => s.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\nconst normalize = s => (s || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');\n\n// Utility: extract just the filename from a Slack URL\n// Utility: extract just the filename from a Slack URL and strip file id prefix\nconst extractFileName = (name) => {\n  if (!name) return \"\";\n  // If it's a Slack download URL, keep only the filename part\n  const idx = name.lastIndexOf(\"/download/\");\n  let fname = idx !== -1 ? name.substring(idx + 10) : name;\n\n  // Strip Slack-style file id prefix like \"F09HZFR9BA8-Aditya.pdf\" → \"Aditya.pdf\"\n  const dashIndex = fname.indexOf(\"-\");\n  if (dashIndex !== -1) {\n    return fname.substring(dashIndex + 1);\n  }\n  return fname;\n};\n\n\n\n// Levenshtein distance\nfunction levenshtein(a, b) {\n  const m = a.length, n = b.length;\n  if (m === 0) return n;\n  if (n === 0) return m;\n  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));\n  for (let i = 0; i <= m; i++) dp[i][0] = i;\n  for (let j = 0; j <= n; j++) dp[0][j] = j;\n  for (let i = 1; i <= m; i++) {\n    for (let j = 1; j <= n; j++) {\n      const cost = a[i - 1] === b[j - 1] ? 0 : 1;\n      dp[i][j] = Math.min(\n        dp[i - 1][j] + 1,\n        dp[i][j - 1] + 1,\n        dp[i - 1][j - 1] + cost\n      );\n    }\n  }\n  return dp[m][n];\n}\n\n// ---------- Matching logic ----------\nlet matchedFiles = [];\nlet matchMethod = 'none';\n\nif (!files.length) {\n  matchedFiles = [];\n  matchMethod = 'no-files';\n} else if (!query.trim()) {\n  matchedFiles = files.map(f => ({ ...f, name: extractFileName(f.name) }));\n  matchMethod = 'no-query';\n} else {\n  const q = query.trim();\n\n  // 1) exact regex\n  try {\n    const re = new RegExp(escapeRegExp(q), 'i');\n    matchedFiles = files.filter(f => re.test(f.name))\n      .map(f => ({ ...f, name: extractFileName(f.name) }));\n    if (matchedFiles.length) matchMethod = 'regex';\n  } catch (e) {}\n\n  // 2) normalized substring\n  if (matchedFiles.length === 0) {\n    const nQ = normalize(q);\n    matchedFiles = files.filter(f => normalize(f.name).includes(nQ))\n      .map(f => ({ ...f, name: extractFileName(f.name) }));\n    if (matchedFiles.length) matchMethod = 'normalized-substring';\n  }\n\n  // 3) fuzzy match\n  if (matchedFiles.length === 0) {\n    const nQ = normalize(q);\n    const sims = files.map(f => {\n      const nf = normalize(f.name);\n      const dist = levenshtein(nf, nQ);\n      const maxLen = Math.max(nf.length, nQ.length, 1);\n      const sim = 1 - dist / maxLen;\n      return { file: f, sim };\n    }).sort((a, b) => b.sim - a.sim);\n\n    const THRESHOLD = 0.45;\n    const fuzzyMatches = sims.filter(s => s.sim >= THRESHOLD).map(s => ({\n      id: s.file.id,\n      name: extractFileName(s.file.name),\n      score: Number(s.sim.toFixed(3))\n    }));\n\n    if (fuzzyMatches.length) {\n      matchedFiles = fuzzyMatches;\n      matchMethod = 'fuzzy';\n    } else if (sims.length) {\n      matchedFiles = sims.slice(0, 3).map(s => ({\n        id: s.file.id,\n        name: extractFileName(s.file.name),\n        score: Number(s.sim.toFixed(3))\n      }));\n      matchMethod = 'top-suggestions';\n    }\n  }\n}\n\n// Output with dynamic channelId\nreturn [{\n  json: {\n    query,\n    matchMethod,\n    matchedFiles: matchedFiles.map(f => ({\n      ...f,\n      name: extractFileName(f.name)\n    })),\n    channelId,\n    teamid,\n    message: matchedFiles.length === 0 ? \"No files found\" : undefined\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        -1728
+      ],
+      "id": "33b88ed4-413d-4406-a93b-85b2f95ddee4",
+      "name": "Name matching"
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.file.id }}-{{ $('Slack webhook').item.json.body.event.files[0].name }}",
+        "driveId": {
+          "__rl": true,
+          "value": "1Lnbf7FKNWYHPYPHdzvpBd3oIS3eYKSfj",
+          "mode": "id"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "root",
+          "mode": "list",
+          "cachedResultName": "/ (Root folder)",
+          "cachedResultUrl": "https://drive.google.com/drive"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2640,
+        1264
+      ],
+      "id": "3e691705-e887-4d51-91be-a7212ae608b1",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "soNofhRmIGaMT5Gi",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "={{ $json.body.text }}",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "root",
+            "mode": "list",
+            "cachedResultName": "/ (Root folder)",
+            "cachedResultUrl": "https://drive.google.com/drive"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -560,
+        -1728
+      ],
+      "id": "cab7ab3b-6561-41c4-b321-8df4e82cb594",
+      "name": "Search files and folders",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "soNofhRmIGaMT5Gi",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "522dd235-c864-4b43-849e-152a50299161",
+              "leftValue": "={{ $json.body.event.files }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        928,
+        2160
+      ],
+      "id": "56338017-016c-4912-8a1d-1d5b2de5ee27",
+      "name": "If1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "create",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "m0h1uatw6hdhyev",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "file_id",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.event.files[0].id }}"
+            },
+            {
+              "fieldName": "file_name",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.event.files[0].name }}"
+            },
+            {
+              "fieldName": "mime_type",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.event.files[0].mimetype }}"
+            },
+            {
+              "fieldName": "created_time",
+              "fieldValue": "={{ $now }}"
+            },
+            {
+              "fieldName": "uploader_slack_user",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.event.files[0].user }}"
+            },
+            {
+              "fieldName": "message_id",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.event.client_msg_id }}"
+            },
+            {
+              "fieldName": "=file_uploaded",
+              "fieldValue": "={{ $('Upload file').item.json.id ? true : false }}"
+            },
+            {
+              "fieldName": "user_team",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.event.files[0].user_team }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        2928,
+        1264
+      ],
+      "id": "d02f23dc-014f-4590-b6ce-b16a330e8b98",
+      "name": "Create a row2",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "n8n",
+          "mode": "list",
+          "cachedResultName": "n8n"
+        },
+        "options": {
+          "clearNamespace": true,
+          "pineconeNamespace": "=Starfish"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        4816,
+        2224
+      ],
+      "id": "713e85fc-c83f-4116-a6c3-5c025632482d",
+      "name": "Pinecone Vector Store",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false,
+      "credentials": {
+        "pineconeApi": {
+          "id": "jzz4M6NM1G9HA1OP",
+          "name": "PineconeApi n8n atom"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        4816,
+        2560
+      ],
+      "id": "c020778d-83e5-4865-b5a8-3d18a74ec138",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "eLIPcUwNawbJ8FJX",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chunkSize": 1500,
+        "chunkOverlap": 300,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        4784,
+        2864
+      ],
+      "id": "db1cff77-909f-439a-b411-fec18d05d737",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "file-select",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        4480
+      ],
+      "id": "8654370c-a1af-410e-ba9f-ea9cd22c7ee6",
+      "name": "Webhook1",
+      "webhookId": "584bc785-ce04-42f0-ba03-e12b97477166",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the raw payload string from the correct location\nconst rawPayload = $json.body?.payload || $json.payload;\n\nif (!rawPayload) {\n  throw new Error(\"No Slack interactive payload found in request\");\n}\n\n// Parse the Slack payload JSON string\nconst parsed = JSON.parse(rawPayload);\n\n// Extract the file ID from the button's value\nconst fileId = parsed?.actions?.[0]?.value || null;\n\n// Extract channel and user info\nconst channelId = parsed?.channel?.id || null;\nconst userId = parsed?.user?.id || null;\n\n// Try to get the file name from the block before the actions block\nlet fileName = null;\nif (parsed?.message?.blocks && parsed.actions?.[0]) {\n  const actionBlockId = parsed.actions[0].block_id;\n\n  // Find the index of the actions block\n  const idx = parsed.message.blocks.findIndex(\n    b => b.type === \"actions\" && b.block_id === actionBlockId\n  );\n\n  if (idx > 0 && parsed.message.blocks[idx - 1].type === \"section\") {\n    // Remove the :page_facing_up: icon and trim spaces\n    fileName = parsed.message.blocks[idx - 1].text.text\n      .replace(/^:page_facing_up:\\s*/, \"\")\n      .trim();\n  }\n}\n\nreturn [{\n  json: {\n    fileId,\n    fileName,\n    channelId,\n    userId,\n    raw: parsed\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        4480
+      ],
+      "id": "4e74f388-8ff6-4e7a-8415-b27cd439403d",
+      "name": "Code",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.fileId }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2592,
+        4480
+      ],
+      "id": "f00ebe6a-8891-46a1-b555-1fff72e40832",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "soNofhRmIGaMT5Gi",
+          "name": "Google Drive OAuth2 API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        4784,
+        2688
+      ],
+      "id": "477aa1b5-6c1c-4184-b8e0-ef10c12cb02a",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        4704,
+        1088
+      ],
+      "id": "4ff4f64c-9e0a-4e07-b5c3-8f87281bebf3",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "29476d16-06ae-4811-802c-c36e05fa50c7",
+              "leftValue": "={{ $('Slack webhook').item.json.body.event.files[0].filetype }}",
+              "rightValue": "pdf",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2704,
+        2208
+      ],
+      "id": "c0cc464f-67a6-4d1a-8b4e-77a72790555f",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "23716851-f7e4-47e4-ad9d-16141b248760",
+              "leftValue": "={{ $json.requiresOCR }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3360,
+        1840
+      ],
+      "id": "287912a7-ef53-48a5-abfd-f0518ab0a175",
+      "name": "If4",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Slack webhook').item.json.body.event.text }}",
+        "options": {
+          "systemMessage": "=ALWAYS Use the Pinecone vector database as your tool for document lookup.\n\nYou are Starfish, a friendly Slack bot that answers questions using uploaded documents.\n\n**Core behavior**\n- Always ground answers strictly in content retrieved from the Pinecone namespaces.\n- Be complete and accurate. When the user asks for lists, include the entire section from the document, even if it is long. Maintain Markdown formatting for clarity.\n- If the retrieved content is lengthy or spans multiple sections, merge relevant chunks to form a full, continuous answer.\n- Use **bold** headings for key sections or points. Avoid decorative characters, emojis, or other special symbols for emphasis (Markdown bold is allowed).\n- Do not mention or hint at the underlying storage provider by name — refer only to \"uploaded files\" or \"already uploaded files.\"\n\n**Greeting**\n- If the user simply greets you (for example: \"hi\", \"hello\"), respond only with the exact text:\n  -Hello! I'm Starfish, your friendly Slack bot. How can I help you today?\n  (Do not add steps, service descriptions, or any other instructions in the greeting.)\n\n**If the user asks \"Who are you?\" or \"What can you do?\"**\n- Provide a short bullet list of services (only when asked). Example:\n  - Answer questions from uploaded documents  \n  - Allow users to upload files (PDF, DOCX, TXT, CSV, etc.) for Q&A  \n  - Retrieve and analyze print-protected PDFs\n  - users can select an already-uploaded file with the `/selectFile` command for Q&A  \n  - Handle questions spanning multiple documents\n\n**If the user asks \"How can I use you step by step?\" (or similar)**\n- Provide a clear, numbered, actionable guide (concise). Example steps to return when requested:\n  1. Upload the document(s) (PDF, DOCX, TXT, CSV) into the DM or channel where starfish will be added.  \n  2. Wait for confirmation that the file has been processed and is ready for Q&A.  \n  3. To target a specific uploaded file, run `/selectFile <hint for filename>` to select one of the already uploaded files.  \n     **Example:** `/selectFile project-re` to select (proect-report etc.) matching uploaded file .  \n  4. Ask your question in the channel or DM, referencing the selected or processed file if needed.  \n  5. Always use mention '@starfish' in channel to interact with starfish\n  6. If the document is print-protected, replies may take slightly longer.  \n  7. For cross-document questions, Starfish will search across the indexed documents and answer based on retrieved content.  \n  \n\n**Answering rules & limits**\n- Never invent facts beyond the documents. If retrieved content does not answer the user's question, use the exact error message above.\n- Do not include service descriptions or usage steps unless the user explicitly asks for them (either \"Who are you?\" / \"What can you do?\" or \"How can I use you step by step?\").\n- Keep answers concise; use short paragraphs or bullet points for clarity.\n- don't use * or any other special symbols for replies\n- If required information is missing, reply with the exact text:  \n     The document is not uploaded for these details or uploaded/selected document   is not correctly processed.\n\nRemember: you are Starfish — the Slack bot that provides document-grounded Q&A and file selection via `/selectFile`.\n\n\nNOTE: ALWAYS USE PINECONE AS TOOL FOR ANSWERING THE USER QUESTIONS."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1536,
+        2848
+      ],
+      "id": "be114429-12b3-4448-b76f-dd2cd9bc2818",
+      "name": "AI Agent",
+      "retryOnFail": false,
+      "alwaysOutputData": false,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "call this tools to access the data of pinecone index",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "n8n",
+          "mode": "list",
+          "cachedResultName": "n8n"
+        },
+        "topK": 20,
+        "options": {
+          "pineconeNamespace": "=Starfish"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        1600,
+        3120
+      ],
+      "id": "f9c3922c-f072-47de-a6ed-681677907547",
+      "name": "Pinecone Vector Store1",
+      "credentials": {
+        "pineconeApi": {
+          "id": "jzz4M6NM1G9HA1OP",
+          "name": "PineconeApi n8n atom"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        3360
+      ],
+      "id": "329f0fdf-0794-42b4-a1bb-6804c69d4f09",
+      "name": "Embeddings Google Gemini1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "eLIPcUwNawbJ8FJX",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "create",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "maiqygb66zlqn5x",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "slack_user",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.event.user }}"
+            },
+            {
+              "fieldName": "question",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.event.text }}"
+            },
+            {
+              "fieldName": "answer",
+              "fieldValue": "={{ $json.message.text }}"
+            },
+            {
+              "fieldName": "channel_id",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.event.channel }}"
+            },
+            {
+              "fieldName": "message_id",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.event.client_msg_id }}"
+            },
+            {
+              "fieldName": "timestamp",
+              "fieldValue": "={{ $now }}"
+            },
+            {
+              "fieldName": "team_id",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.authorizations[0].team_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        3504,
+        3120
+      ],
+      "id": "fe1cfa08-e32f-477c-9f62-73abb290d2fb",
+      "name": "Create a row1",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxOutputTokens": 4000,
+          "temperature": 0.5,
+          "topK": 12
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1936,
+        3536
+      ],
+      "id": "4f1fdeab-ea45-4ce1-9997-015632dae668",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "eLIPcUwNawbJ8FJX",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "806e042e-58ed-481d-a26b-fc80b8d8c83b",
+              "name": "botToken",
+              "value": "={{$json[\"access_token\"]}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -352,
+        -1216
+      ],
+      "id": "cacc95e3-4fb6-4a9d-8c65-d88e6f006315",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "path": "slack-oauth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1296,
+        -1216
+      ],
+      "id": "8fdca85d-fdc6-472f-be3b-329b25e29800",
+      "name": "Webhook2",
+      "webhookId": "a68d6e44-6987-46c1-8324-015fe5d94b6a"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/oauth.v2.access",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "client_id",
+              "value": "8395289183441.9315965017559"
+            },
+            {
+              "name": "client_secret",
+              "value": "28178bfab43d99370ff12b5056853816"
+            },
+            {
+              "name": "code",
+              "value": "={{$json[\"query\"][\"code\"]}}"
+            },
+            {
+              "name": "redirect_uri",
+              "value": "https://n8n.levelingupdata.com/webhook/slack-oauth"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1040,
+        -1216
+      ],
+      "id": "033853e6-4bdc-4915-81ef-a107b0e66f67",
+      "name": "HTTP Request5"
+    },
+    {
+      "parameters": {
+        "url": "https://slack.com/api/auth.test",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('HTTP Request5').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -128,
+        -1216
+      ],
+      "id": "7c0af407-d5c5-431c-9dfa-fccf9e3b683f",
+      "name": "HTTP Request6"
+    },
+    {
+      "parameters": {
+        "content": "## Webhook to add Authentication to the Slack app \n**Start the webhook** to test and to add in Slack Workspace.",
+        "height": 272
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1664,
+        -1280
+      ],
+      "typeVersion": 1,
+      "id": "d981b641-d2f7-4626-ba95-91620a0f93f0",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $('AI Agent').item.json.output }}"
+            },
+            {
+              "name": "channel",
+              "value": "={{ $('Slack webhook').item.json.body.event.channel }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3104,
+        3120
+      ],
+      "id": "488a97fd-410b-4a4a-932a-6f76a6c14326",
+      "name": "HTTP Request7"
+    },
+    {
+      "parameters": {
+        "content": "## Webhook node for Slash Command \n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1632,
+        -1760
+      ],
+      "typeVersion": 1,
+      "id": "f0515863-2fec-4238-adfc-af0a5c27047e",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<html>\n  <head><title>Slack Installed</title></head>\n  <body style=\"font-family: sans-serif; text-align: center; margin-top: 50px;\">\n    <h2>🎉 Slack App Installed!</h2>\n    <p>You can now return to the application.</p>\n  </body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        96,
+        -1216
+      ],
+      "id": "9907ea69-5009-468a-ac9d-554ed1de61b6",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('AuthoriserNode2').item.json.bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $('Slack webhook').item.json.body.event.channel }}\",\n  \"text\": \"Current file format isn't supported ❌\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2320,
+        2144
+      ],
+      "id": "b5edbdc5-60d2-4dfe-bb3e-602341e3e2a8",
+      "name": "HTTP Request8"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        2512,
+        3136
+      ],
+      "id": "129e954d-dfb0-437a-bc49-dc271fca2d1e",
+      "name": "AuthoriserNode",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $('Slack webhook').item.json.body.team_id }}",
+              "rightValue": "={{ $json.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2832,
+        3136
+      ],
+      "id": "2f91961c-69a5-4220-875e-6466b4ed51c5",
+      "name": "If5",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        1696,
+        1504
+      ],
+      "id": "4d27b040-a96e-4b30-9b57-5bc3ead62598",
+      "name": "AuthoriserNode1",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $('Slack webhook').item.json.body.team_id }}",
+              "rightValue": "={{ $json.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1904,
+        1504
+      ],
+      "id": "d92324ce-f3e8-48c4-9bd1-a026044ae3f9",
+      "name": "If6"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        1792,
+        2160
+      ],
+      "id": "02a2a27a-9bac-4850-bcd1-56dd394b77c2",
+      "name": "AuthoriserNode2",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $('Slack webhook').item.json.body.team_id }}",
+              "rightValue": "={{ $json.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2032,
+        2160
+      ],
+      "id": "ac3b7a5d-0786-4708-b8e3-4ed1610f7cb1",
+      "name": "If7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('AuthoriserNode5').item.json.bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $if($('Slack webhook').isExecuted, $('Slack webhook').item.json.body?.event?.channel, JSON.parse($('Webhook1').item.json.body.payload).container?.channel_id) }}\",\n  \"text\": \"✅ File has been processed, You can ask questions now.\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6688,
+        2752
+      ],
+      "id": "9ea2137b-71cc-467d-8ed7-f8c51fd58d5d",
+      "name": "HTTP Request10",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        6048,
+        2768
+      ],
+      "id": "45e35e69-f59e-47c9-b660-30cf4106ee5d",
+      "name": "AuthoriserNode5",
+      "executeOnce": true,
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5bf3bf07-2f2e-4768-a0df-645e3ee5f285",
+              "leftValue": "={{\n  $if(\n    $(\"Slack webhook\").isExecuted, \n    $(\"Slack webhook\").item.json.body?.authorizations?.[0]?.team_id, \n    JSON.parse($(\"Webhook1\").item.json.body.payload).team?.id\n  )\n}}",
+              "rightValue": "={{ $json.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6336,
+        2768
+      ],
+      "id": "77233ccd-3dd5-418f-b747-79e7ce6ddfed",
+      "name": "If11"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -1536,
+        2112
+      ],
+      "id": "2865d807-6ab7-4099-bb39-af52f2fdf112",
+      "name": "Respond to Webhook2",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        464,
+        -1584
+      ],
+      "id": "fe57f91b-fbe4-4d2a-bb99-14f74387b8d3",
+      "name": "AuthoriserNode4",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $('Name matching').item.json.teamid }}",
+              "rightValue": "={{ $json.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1072,
+        -1584
+      ],
+      "id": "007a8a03-63da-43cd-8033-4de9990580a3",
+      "name": "If8"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a7c2aa99-79dc-4db5-bed0-b6601e611ed9",
+              "leftValue": "={{\n  $if(\n    $(\"Slack webhook\").isExecuted,\n    $(\"Slack webhook\").item.json.body.event.blocks[0].elements[0].elements[0].text,\n    $(\"Webhook1\").item.json.body?.event?.blocks[0]?.elements[0]?.elements[0]?.text\n  )\n}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5552,
+        2224
+      ],
+      "id": "5b29149e-fa8f-4516-9484-cb6a4a53abe5",
+      "name": "If13",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "=POST",
+        "url": "=https://ocr-api.levelingupdata.com/pdf",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer xDxgUKoEspeJYmvu2qmV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "dpi",
+              "value": "72"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3632,
+        4464
+      ],
+      "id": "b8910a96-a5bd-4adb-a982-472b57f04265",
+      "name": "HTTP Request2",
+      "notesInFlow": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b16d421c-e8e8-4bde-8250-306334858fb5",
+              "leftValue": "={{ $('Code').item.json.fileName }}",
+              "rightValue": "pdf",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3008,
+        4480
+      ],
+      "id": "652339ba-85d8-4e52-a158-8823bd987b98",
+      "name": "If15",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        4544,
+        3936
+      ],
+      "id": "bdc778fd-9180-44ca-839d-e2d87f0ae1f7",
+      "name": "Convert to File1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "92632d51-cbc6-4fb9-bb0f-dbc6b4e6adf3",
+              "leftValue": "={{ $json.message }}",
+              "rightValue": "No files found",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -160,
+        -1728
+      ],
+      "id": "0299466c-6cab-4816-8eaa-4073124b7f48",
+      "name": "If14"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('AuthoriserNode7').item.json.bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $('Name matching').item.json.channelId }}\",\n  \"text\": \"No files found with the given name.\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1648,
+        -1872
+      ],
+      "id": "ea1a22cc-0f7b-400f-b872-4a126b92f9d6",
+      "name": "HTTP Request4"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        288,
+        -1856
+      ],
+      "id": "f73183c8-c208-4ffa-bca4-a5ae0f99955e",
+      "name": "AuthoriserNode7",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $('Name matching').item.json.teamid }}",
+              "rightValue": "={{ $json.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        -1856
+      ],
+      "id": "0d339b35-004e-4937-8f17-e152d139ec4d",
+      "name": "If16"
+    },
+    {
+      "parameters": {
+        "url": "=https://slack.com/api/files.info?file={{ $('Slack webhook').item.json.body.event.files[0].id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.bot_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2144,
+        1488
+      ],
+      "id": "bb2129d2-a8c3-4d83-a424-0aa47c6b5363",
+      "name": "FileInfo",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.file.url_private }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('If6').item.json.bot_token }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2368,
+        1488
+      ],
+      "id": "bf3f76df-82f6-4990-83fb-625afaa40018",
+      "name": "File-download",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://slack.com/api/files.info?file={{ $('Slack webhook').item.json.body.event.files[0].id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('If6').item.json.bot_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3856,
+        816
+      ],
+      "id": "59ef04fd-abee-4691-937f-9f60ce6e7077",
+      "name": "FileInfo1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.file.url_private }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('If6').item.json.bot_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4256,
+        816
+      ],
+      "id": "eb7e9de6-eb85-4c8f-a06c-d707bcf2fe97",
+      "name": "File-download1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://slack.com/api/files.info?file={{ $('Slack webhook').item.json.body.event.files[0].id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('If6').item.json.bot_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3664,
+        1856
+      ],
+      "id": "269899cf-822a-409f-ae60-f786be8876fc",
+      "name": "FileInfo2"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.file.url_private }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('If6').item.json.bot_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3984,
+        1856
+      ],
+      "id": "c1b9eefc-5671-4fda-a9a1-b8898923ce38",
+      "name": "File-download2"
+    },
+    {
+      "parameters": {
+        "method": "=POST",
+        "url": "=https://ocr-api.levelingupdata.com/pdf",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer xDxgUKoEspeJYmvu2qmV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "dpi",
+              "value": "72"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4480,
+        816
+      ],
+      "id": "78f5a3c3-2b2d-4c72-81ef-246b9d8210dd",
+      "name": "OCR request",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f74d3d0a-be21-4d66-bebc-638b79bd06e3",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4672,
+        816
+      ],
+      "id": "8cda52ea-f5ee-433f-89b2-0e109c1f510c",
+      "name": "If9"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f74d3d0a-be21-4d66-bebc-638b79bd06e3",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2032,
+        2848
+      ],
+      "id": "02b07dd5-24fa-4965-9b2e-0c2eacd6e48d",
+      "name": "If10"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $('Slack webhook').item.json.body.team_id }}",
+              "rightValue": "={{ $json.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5360,
+        -32
+      ],
+      "id": "ed526f29-360c-49e8-9496-9805ca504f9c",
+      "name": "If17"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        5104,
+        -32
+      ],
+      "id": "b0cdd8c2-a851-4484-aa49-06d6ee0d4052",
+      "name": "AuthoriserNode8",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $('Slack webhook').item.json.body.event.channel }}\",\n  \"text\": \"There seems an issue in your file!! try simple or print-protected file\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5760,
+        -48
+      ],
+      "id": "6e4fa3e7-8814-435b-b674-5a59d4e64914",
+      "name": "HTTP Request11"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $('Slack webhook').item.json.body.team_id }}",
+              "rightValue": "={{ $json.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2768,
+        2832
+      ],
+      "id": "c125736e-e80f-413b-b475-9804ab4311b1",
+      "name": "If18"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        2512,
+        2832
+      ],
+      "id": "0d96bc92-a13f-4c2f-9460-7d9ad04476f2",
+      "name": "AuthoriserNode9",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $('Slack webhook').item.json.body.event.channel }}\",\n  \"text\": \"Execution Failed, Try again!!\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3104,
+        2816
+      ],
+      "id": "128f3a05-14b6-49a5-ba2a-41a70082a269",
+      "name": "HTTP Request12"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $('Slack webhook').item.json.body.team_id }}",
+              "rightValue": "={{ $json.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3056,
+        592
+      ],
+      "id": "26fef6e0-03bf-4208-9c4c-995b0e283345",
+      "name": "If19"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        2528,
+        592
+      ],
+      "id": "2a925370-bab3-44f3-b1ba-a8e52e677c83",
+      "name": "AuthoriserNode10",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "create",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "maiqygb66zlqn5x",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "slack_user",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.event.user }}"
+            },
+            {
+              "fieldName": "question",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.event.text }}"
+            },
+            {
+              "fieldName": "answer",
+              "fieldValue": "={{ $('AI Agent2').item.json.output }}"
+            },
+            {
+              "fieldName": "channel_id",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.event.channel }}"
+            },
+            {
+              "fieldName": "message_id",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.event.client_msg_id }}"
+            },
+            {
+              "fieldName": "timestamp",
+              "fieldValue": "={{ $now }}"
+            },
+            {
+              "fieldName": "team_id",
+              "fieldValue": "={{ $('Slack webhook').item.json.body.authorizations[0].team_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        7904,
+        2176
+      ],
+      "id": "ee3465d8-180b-4c0e-b248-edb26864ab28",
+      "name": "Create a row",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $('AI Agent2').item.json.output }}"
+            },
+            {
+              "name": "channel",
+              "value": "={{ $('Slack webhook').item.json.body.event.channel }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7600,
+        2176
+      ],
+      "id": "b4cc61e5-e23e-4484-9dde-62b919c94ef0",
+      "name": "HTTP Request9"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        6896,
+        2192
+      ],
+      "id": "3b0e57b6-f59e-4af1-aac3-99f9fc73c401",
+      "name": "AuthoriserNode3",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $('Slack webhook').item.json.body.team_id }}",
+              "rightValue": "={{ $json.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7216,
+        2192
+      ],
+      "id": "9d4db3fc-1f49-426b-9435-98257902eed4",
+      "name": "If12",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f74d3d0a-be21-4d66-bebc-638b79bd06e3",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6432,
+        1680
+      ],
+      "id": "ccc5c23b-5966-4fe3-9eb1-efa507f8de17",
+      "name": "If20"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $('Slack webhook').item.json.body.team_id }}",
+              "rightValue": "={{ $json.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7056,
+        1056
+      ],
+      "id": "84ec600b-7d05-4129-b7a3-fe84fe99d058",
+      "name": "If21"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        6800,
+        1056
+      ],
+      "id": "a7342d69-3880-4208-9592-535f0c8d7264",
+      "name": "AuthoriserNode11",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $('Slack webhook').item.json.body.event.channel }}\",\n  \"text\": \"Execution Failed, Try again!!\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7392,
+        1040
+      ],
+      "id": "06df5c57-4cb9-4945-9fbd-ab3a8ea910be",
+      "name": "HTTP Request14"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f74d3d0a-be21-4d66-bebc-638b79bd06e3",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4128,
+        3776
+      ],
+      "id": "e543b362-4f3b-4b37-8827-03f0456207e6",
+      "name": "If22"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $('Code').item.json.raw.user.team_id }}",
+              "rightValue": "={{ $json.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4528,
+        3664
+      ],
+      "id": "ad51b42f-19bc-4713-ac05-bc32a1161a04",
+      "name": "If23"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        4336,
+        3664
+      ],
+      "id": "ac6d3196-8344-4e63-9815-dced78414232",
+      "name": "AuthoriserNode12",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $('Code').item.json.raw.channel.id }}\",\n  \"text\": \"Execution Failed, Try again!!\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4864,
+        3648
+      ],
+      "id": "1a2ff712-2de7-4895-b701-6dfa512c4c3e",
+      "name": "HTTP Request15"
+    },
+    {
+      "parameters": {
+        "path": "whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -3200,
+        784
+      ],
+      "id": "b5e8c334-fe42-408d-9e8e-efaf52fd4c7e",
+      "name": "Webhook4",
+      "webhookId": "dfdd45ca-accd-4496-93e8-80056056fbc3"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2704,
+        768
+      ],
+      "id": "596a53db-239e-4453-965e-dd4facda1856",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d345d1dc-ab35-4c5e-ac15-297a252e5389",
+              "leftValue": "={{ $json.query['hub.verify_token'] }}",
+              "rightValue": "ehr@logic",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2992,
+        784
+      ],
+      "id": "8287a5b4-0130-43bf-9ad6-57a268d687f0",
+      "name": "If24"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -1520,
+        3392
+      ],
+      "id": "aae898bd-7be3-47ae-bd34-6f60c9dad332",
+      "name": "Respond to Webhook3"
+    },
+    {
+      "parameters": {
+        "content": "## WhatsApp Connection \n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -3552,
+        752
+      ],
+      "typeVersion": 1,
+      "id": "621005f8-f8c2-4fd0-9a3e-17daa5435cc0",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "events",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2064,
+        2112
+      ],
+      "id": "189df739-59bc-4927-bde7-ab4715152f78",
+      "name": "Slack webhook",
+      "webhookId": "baf98617-a03f-4a14-8f57-fbf086cd8f63",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1824,
+        3392
+      ],
+      "id": "2facdfc6-340a-43d9-a91d-4c37d0b889ba",
+      "name": "WhatsApp webhook",
+      "webhookId": "dfdd45ca-accd-4496-93e8-80056056fbc3"
+    },
+    {
+      "parameters": {
+        "operation": "deleteFile",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        784,
+        320
+      ],
+      "id": "b4546918-7b56-4f9f-9d8f-da97cf858e90",
+      "name": "Delete a file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "soNofhRmIGaMT5Gi",
+          "name": "Google Drive OAuth2 API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "={{ $json.body.event.file_id }}",
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        592,
+        320
+      ],
+      "id": "87736d71-040d-4871-939c-a24df1e63545",
+      "name": "Search files and folders1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "soNofhRmIGaMT5Gi",
+          "name": "Google Drive OAuth2 API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "=✅ Your file has been deleted from our cloud storage"
+            },
+            {
+              "name": "channel",
+              "value": "={{ $('Slack webhook').item.json.body.event.channel_ids[0] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1904,
+        -192
+      ],
+      "id": "d0033a14-d71d-49d2-a929-475582757a25",
+      "name": "HTTP Request16"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        320
+      ],
+      "id": "9026f8e1-b23a-4cb1-9a22-7fb72766a645",
+      "name": "If26"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "57cd5d43-65e0-4a5a-9438-83ee04e8f772",
+              "leftValue": "={{ $('Slack webhook').item.json.body.event.type }}",
+              "rightValue": "=file_deleted",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        1440
+      ],
+      "id": "2d1c2e45-7406-420f-b581-af8681993aff",
+      "name": "If25"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $('Slack webhook').item.json.body.team_id }}",
+              "rightValue": "={{ $('Slack webhook').item.json.body.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1648,
+        -176
+      ],
+      "id": "bcb460c2-d3f7-4e70-9f21-e8c6ccdfcbe1",
+      "name": "If27"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        1472,
+        -176
+      ],
+      "id": "5a8fa24a-cffd-46f7-a783-c3dfcf769ce4",
+      "name": "AuthoriserNode13",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "=❌ Something went wrong"
+            },
+            {
+              "name": "channel",
+              "value": "={{ $('Slack webhook').item.json.body.event.channel_ids[0] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1808,
+        832
+      ],
+      "id": "96b6ca9e-d53a-477e-8ec7-b04b5d11e85d",
+      "name": "HTTP Request17"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $('Slack webhook').item.json.body.team_id }}",
+              "rightValue": "={{ $('Slack webhook').item.json.body.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1552,
+        848
+      ],
+      "id": "e469da84-ed92-41ef-b649-7341cf1e85aa",
+      "name": "If28"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        1376,
+        848
+      ],
+      "id": "abf01650-1bea-4cd4-ad26-3e8dc20bf7c1",
+      "name": "AuthoriserNode14",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $('Slack webhook').item.json.body.event.channel }}\",\n  \"text\": \"⏳ Please Wait, your File is being Processed!!\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3552,
+        -64
+      ],
+      "id": "2834d3d5-9d2f-4f81-948e-74489a8596a1",
+      "name": "Processing Messages"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        5232,
+        2224
+      ],
+      "id": "ddbb2a9f-30b6-4330-8f20-f5dff078c3d1",
+      "name": "Wait2",
+      "webhookId": "6f86cc80-7129-417d-9aec-b60a1f2d4a02"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Slack webhook').item.json.body.event.blocks[0].elements[0].elements[0].text }}",
+        "options": {
+          "systemMessage": "=ALWAYS Use the Pinecone vector database as your tool for document lookup.\n\nYou are Starfish, a friendly Slack bot that answers questions using uploaded documents.\n\n**Core behavior**\n- Always ground answers strictly in content retrieved from the Pinecone namespaces.\n- Be complete and accurate. When the user asks for lists, include the entire section from the document, even if it is long. Maintain Markdown formatting for clarity.\n- If the retrieved content is lengthy or spans multiple sections, merge relevant chunks to form a full, continuous answer.\n- Use **bold** headings for key sections or points. Avoid decorative characters, emojis, or other special symbols for emphasis (Markdown bold is allowed).\n- Do not mention or hint at the underlying storage provider by name — refer only to \"uploaded files\" or \"already uploaded files.\"\n\n**Greeting**\n- If the user simply greets you (for example: \"hi\", \"hello\"), respond only with the exact text:\n  -Hello! I'm Starfish, your friendly Slack bot. How can I help you today?\n  (Do not add steps, service descriptions, or any other instructions in the greeting.)\n\n**If the user asks \"Who are you?\" or \"What can you do?\"**\n- Provide a short bullet list of services (only when asked). Example:\n  - Answer questions from uploaded documents  \n  - Allow users to upload files (PDF, DOCX, TXT, CSV, etc.) for Q&A  \n  - Retrieve and analyze print-protected PDFs\n  - users can select an already-uploaded file with the `/selectFile` command for Q&A  \n  - Handle questions spanning multiple documents\n\n**If the user asks \"How can I use you step by step?\" (or similar)**\n- Provide a clear, numbered, actionable guide (concise). Example steps to return when requested:\n  1. Upload the document(s) (PDF, DOCX, TXT, CSV) into the DM or channel where starfish will be added.  \n  2. Wait for confirmation that the file has been processed and is ready for Q&A.  \n  3. To target a specific uploaded file, run `/selectFile <hint for filename>` to select one of the already uploaded files.  \n     **Example:** `/selectFile project-re` to select (proect-report etc.) matching uploaded file .  \n  4. Ask your question in the channel or DM, referencing the selected or processed file if needed.  \n  5. Always use mention '@starfish' in channel to interact with starfish\n  6. If the document is print-protected, replies may take slightly longer.  \n  7. For cross-document questions, Starfish will search across the indexed documents and answer based on retrieved content.  \n  \n\n**Answering rules & limits**\n- Never invent facts beyond the documents. If retrieved content does not answer the user's question, use the exact error message above.\n- Do not include service descriptions or usage steps unless the user explicitly asks for them (either \"Who are you?\" / \"What can you do?\" or \"How can I use you step by step?\").\n- Keep answers concise; use short paragraphs or bullet points for clarity.\n- don't use * or any other special symbols for replies\n- If required information is missing, reply with the exact text:  \n     The document is not uploaded for these details or uploaded/selected document   is not correctly processed.\n\nRemember: you are Starfish — the Slack bot that provides document-grounded Q&A and file selection via `/selectFile`.\n\n\nNOTE: ALWAYS USE PINECONE AS TOOL FOR ANSWERING THE USER QUESTIONS."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        6016,
+        1680
+      ],
+      "id": "46abcc38-c81d-4720-9055-1acfc1784325",
+      "name": "AI Agent2",
+      "retryOnFail": false,
+      "alwaysOutputData": false,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxOutputTokens": 4000,
+          "temperature": 0.5,
+          "topK": 12
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        6016,
+        2000
+      ],
+      "id": "3f368704-4789-437d-996f-7a494ddafb86",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "eLIPcUwNawbJ8FJX",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "call this tools to access the data of pinecone index",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "n8n",
+          "mode": "list",
+          "cachedResultName": "n8n"
+        },
+        "options": {
+          "pineconeNamespace": "=Starfish"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        6080,
+        2144
+      ],
+      "id": "13bcdbca-a8fe-4c57-9968-bafd6d325eae",
+      "name": "Pinecone Vector Store2",
+      "credentials": {
+        "pineconeApi": {
+          "id": "jzz4M6NM1G9HA1OP",
+          "name": "PineconeApi n8n atom"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        6080,
+        2304
+      ],
+      "id": "01357bd7-178d-4d42-a11b-5396687ae0b2",
+      "name": "Embeddings Google Gemini2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "eLIPcUwNawbJ8FJX",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b5428f2d-3fae-43ce-ba73-7f9f6109ec6c",
+              "leftValue": "={{ $json.body.event.bot_profile }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "ce4b1eff-b06e-4e0d-ae23-3519a17e5055",
+              "leftValue": "={{ $('Slack webhook').item.json.body.event.type }}",
+              "rightValue": "app_home_opened",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -992,
+        2112
+      ],
+      "id": "8bb012c4-183e-426a-bc24-81ebaa09fc5a",
+      "name": "If3",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        1504
+      ],
+      "id": "ebc75cee-f1be-4e6d-bd6d-ad45c73a961c",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3e7227bb-e94c-48aa-af99-2501380b6622",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        48,
+        2160
+      ],
+      "id": "5a646783-2a25-4439-86de-980a3196a239",
+      "name": "If31"
+    },
+    {
+      "parameters": {
+        "setAllData": false,
+        "options": {}
+      },
+      "id": "2ef9d820-e501-4122-aa7a-aaa3c5321d42",
+      "name": "Move Binary Data",
+      "type": "n8n-nodes-base.moveBinaryData",
+      "typeVersion": 1,
+      "position": [
+        -1056,
+        -1728
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5532e932-33be-4db3-a17d-961009e156ae",
+              "leftValue": "={{ $('Slack webhook').item.json.body.event.files }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c21753f7-ce03-4dbc-b943-b535ddfd5dc2",
+              "leftValue": "={{ $('Slack webhook').item.json.body.event.type }}",
+              "rightValue": "file_deleted",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -544,
+        2128
+      ],
+      "id": "c325b20d-53c1-4479-ac72-80337c11330e",
+      "name": "If30"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code Node\nconst BASE_URL = \"https://pb.levelingupdata.com/api/collections/slack_files/records\";\n\n// Take JSON from the previous node\nconst data = $json;\n\n// Extract fields (fall back to \"unknown_*\" if not present)\nconst file_id = $('Slack webhook').first().json.body.event.files[0].id || data.file?.id || \"unknown_file\";\nconst file_name = $('Slack webhook').first().json.body.event.files[0].name || data.file?.name || \"unnamed\";\nconst mime_type = $('Slack webhook').first().json.body.event.files[0].mimetype || data.file?.mimetype || \"unknown\";\nconst uploader_user_id = $('Slack webhook').first().json.body.event.files[0].user || data.file?.user || \"unknown_user\";\nconst message_id = $('Slack webhook').first().json.body.event.client_msg_id || data.message?.ts || data.event?.ts || \"unknown_msg\";\nconst team_id = $('Slack webhook').first().json.body.event.files[0].user_team || data.team?.id || \"unknown_team\";\nconst channel_id = $('Slack webhook').first().json.body.event.channel || \"unknown_team\";\n\n// Boolean flag for upload status (set by the previous node if available)\nconst upload_status = !!$input.first().json.id;\n\n// Payload for PocketBase\nlet payload = {\n  file_id,\n  file_name,\n  mime_type,\n  uploader_user_id,\n  message_id,\n  team_id,\n  channel_id,\n  upload_status,\n};\n\n// Insert new record\nlet inserted = await this.helpers.httpRequest({\n  method: \"POST\",\n  url: BASE_URL,\n  headers: {\n    accept: \"application/json\",\n    \"Content-Type\": \"application/json\",\n  },\n  body: payload,\n  json: true,\n});\n\nreturn [{\n  json: {\n    message: \"File record inserted\",\n    inserted,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        1472
+      ],
+      "id": "0cdbe292-75c3-431e-8c74-2adfd671d6dd",
+      "name": "Code in JavaScript1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ocr-api.levelingupdata.com/check-pdf",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer xDxgUKoEspeJYmvu2qmV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3072,
+        1840
+      ],
+      "id": "fb4952de-f6c1-4ea7-b993-54e626bf1f62",
+      "name": "Check-pdf",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ocr-api.levelingupdata.com/message-verify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Slack-Request-Timestamp",
+              "value": "={{ $('Slack webhook').item.json.headers['x-slack-request-timestamp'] }}"
+            },
+            {
+              "name": "X-Slack-Signature",
+              "value": "={{ $('Slack webhook').item.json.headers['x-slack-signature'] }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer xDxgUKoEspeJYmvu2qmV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Slack webhook').item.json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -192,
+        2160
+      ],
+      "id": "255e2411-d9e1-4021-8196-6da005e2d54f",
+      "name": "message-verify",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ocr-api.levelingupdata.com/form-verify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Slack-Request-Timestamp",
+              "value": "={{ $('Webhook').item.json.headers['x-slack-request-timestamp'] }}"
+            },
+            {
+              "name": "X-Slack-Signature",
+              "value": "={{ $('Webhook').item.json.headers['x-slack-signature'] }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer xDxgUKoEspeJYmvu2qmV"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "specifyBody": "string",
+        "body": "={{ $json.data }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -816,
+        -1728
+      ],
+      "id": "76fa289f-ca9e-4902-a710-e018e67a66ca",
+      "name": "form-vrify"
+    },
+    {
+      "parameters": {
+        "url": "https://slack.com/api/users.info",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "user",
+              "value": "={{ $json.authed_user.id }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -336,
+        -816
+      ],
+      "id": "69f77176-ff9c-4dc0-b398-519013594ab2",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "url": "https://pb.levelingupdata.com/api/collections/users/records?sort=-created",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        48,
+        -896
+      ],
+      "id": "3903287b-4ff2-4fa6-bf75-f3d1f773087a",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code Node\nconst BASE_URL = \"https://pb.levelingupdata.com/api/collections/slack_user/records\";\n\nconst data = $('HTTP Request5').first().json;\n\nconst team_id = data.team?.id || \"Self\";\nconst team_name = data.team?.name || \"unknown\";\nconst bot_token = data.access_token;\nconst bot_user_id = data.bot_user_id;\nconst installer_user_id = data.authed_user?.id;\nconst user_name = $input.first().json.user.real_name || \"\";\nconst user_email = $input.first().json.user.profile.email || \"\";\n\n// ✅ Directly insert record without checking duplicates\nlet payload = {\n  team_id,\n  team_name,\n  bot_token,\n  bot_user_id,\n  installer_user_id,\n  user_name,\n  user_email,\n};\n\nlet inserted = await this.helpers.httpRequest({\n  method: \"POST\",\n  url: BASE_URL,\n  headers: {\n    accept: \"application/json\",\n    \"Content-Type\": \"application/json\",\n  },\n  body: JSON.stringify(payload),\n});\n\nreturn [\n  {\n    json: {\n      message: \"Inserted new record (duplicates allowed)\",\n      inserted,\n      exists: false,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        -576
+      ],
+      "id": "bcf927ec-28b4-4868-8d8e-2d7ba10d9267",
+      "name": "pb_slack_user"
+    },
+    {
+      "parameters": {
+        "jsCode": "// PocketBase base URL\nconst POCKETBASE_URL = 'https://pb.levelingupdata.com';\nconst COLLECTION = 'users';\n\n// Get email from previous Slack node\nconst emailToCheck = $('HTTP Request3').first().json.user?.profile?.email;\nif (!emailToCheck) {\n  return [{ success: false, message: \"No email provided from previous node\" }];\n}\n\nasync function main() {\n  // Step 1: Search for the user by email\n  const searchUrl = `${POCKETBASE_URL}/api/collections/${COLLECTION}/records?filter=${encodeURIComponent(`email=\"${emailToCheck}\"`)}`;\n  \n  const searchRes = await this.helpers.request({\n    method: 'GET',\n    uri: searchUrl,\n    json: true\n  });\n\n  // Step 2: If found, update slack_status\n  if (searchRes?.items?.length > 0) {\n    const user = searchRes.items[0];\n    const updateUrl = `${POCKETBASE_URL}/api/collections/${COLLECTION}/records/${user.id}`;\n\n    const updateRes = await this.helpers.request({\n      method: 'PATCH',\n      uri: updateUrl,\n      body: { slack_status: true },\n      json: true\n    });\n\n    return [{\n      success: true,\n      message: `User ${emailToCheck} found and slack_status updated.`,\n      userId: updateRes.id,\n      slack_status: updateRes.slack_status\n    }];\n  } else {\n    // Step 3: No user found\n    return [{\n      success: false,\n      message: `No user found with email ${emailToCheck}`\n    }];\n  }\n}\n\nreturn await main();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -896
+      ],
+      "id": "3925ce4c-7841-41f4-9773-6f4214b5b595",
+      "name": "pb_slack_status"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code Node\nconst BASE_URL = \"https://data.levelingupdata.com/api/v2/tables/mu4ip1viruub0ej/records\";\nconst API_TOKEN = \"vPk-m8guiR2hKRjc56ozoCueXYuE2Vc3jDEcn_Fj\";\n\n// Incoming payload from previous node\nconst data = $input.first().json;\nconst team_id = data.team?.id || \"fallback_team\";\nconst team_name = data.team?.name || \"unknown\";\nconst bot_token = data.access_token;\nconst bot_user_id = data.bot_user_id;\nconst installer_user_id = data.authed_user?.id;\n\n// Step 1: Fetch all rows to find existing record\nlet allRows = await this.helpers.httpRequest({\n  method: \"GET\",\n  url: `${BASE_URL}?limit=500&shuffle=0&offset=0`,\n  headers: {\n    accept: \"application/json\",\n    \"Authorization\": `Bearer ${API_TOKEN}`,\n  },\n});\n\n// Step 2: Check if team exists\nlet existingRecord = null;\nif (allRows.list && Array.isArray(allRows.list)) {\n  existingRecord = allRows.list.find(r => String(r.team_id) === String(team_id));\n}\n\n// Step 3: Prepare payload\nlet payload = {\n  team_id,\n  team_name,\n  bot_token,\n  bot_user_id,\n  installer_user_id,\n};\n\nif (existingRecord) {\n  // PATCH requires the numeric Id field\n  payload.id = existingRecord.Id;\n\n  let updated = await this.helpers.httpRequest({\n    method: \"PATCH\",\n    url: BASE_URL,\n    headers: {\n      accept: \"application/json\",\n      \"Content-Type\": \"application/json\",\n      \"Authorization\": `Bearer ${API_TOKEN}`,\n    },\n    body: payload,\n    json: true,\n  });\n\n  return [{\n    json: {\n      message: \"Updated existing record\",\n      updated,\n      exists: true,\n    }\n  }];\n} else {\n  // Insert new record\n  let inserted = await this.helpers.httpRequest({\n    method: \"POST\",\n    url: BASE_URL,\n    headers: {\n      accept: \"application/json\",\n      \"Content-Type\": \"application/json\",\n      \"Authorization\": `Bearer ${API_TOKEN}`,\n    },\n    body: payload,\n    json: true,\n  });\n\n  return [{\n    json: {\n      message: \"Inserted new record\",\n      inserted,\n      exists: false,\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        -640
+      ],
+      "id": "3ad266df-4967-469a-b418-0c10e6b3bd1e",
+      "name": "nocodb_slack_user"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {
+          "maxTokens": 4000,
+          "temperature": 0.5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1504,
+        3168
+      ],
+      "id": "c21436f1-b9fa-4be7-9191-1a6166609acf",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "VR2IwE6g1ib86TJe",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b153280c-1197-4dee-a8f9-1747231d240b",
+              "leftValue": "={{ $('Slack webhook').item.json.body.team_id }}",
+              "rightValue": "={{ $json.team_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        688,
+        2720
+      ],
+      "id": "c4ef6c24-663e-4098-83fc-bf46198c9be3",
+      "name": "If29"
+    },
+    {
+      "parameters": {
+        "authentication": "nocoDbApiToken",
+        "operation": "getAll",
+        "projectId": "pmc4kbq3ubaveut",
+        "table": "mu4ip1viruub0ej",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [
+        432,
+        2720
+      ],
+      "id": "e4b041db-bc23-4632-82cf-43d73039294c",
+      "name": "AuthoriserNode15",
+      "credentials": {
+        "nocoDbApiToken": {
+          "id": "YzlThoe6wwQLbW5o",
+          "name": "NocoDB Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $('Slack webhook').item.json.body.event.channel }}\",\n  \"text\": \"Execution Failed, Try again!!\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1024,
+        2704
+      ],
+      "id": "5b010326-6134-4f1d-a2b9-f89b6e94e9e5",
+      "name": "HTTP Request13"
+    },
+    {
+      "parameters": {
+        "url": "=https://pb.levelingupdata.com/api/collections/user_tokens/records?filter=(user_id=\"{{ $json.items[0].id }}\")",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -688,
+        2624
+      ],
+      "id": "98c49c76-2f2a-46d9-8366-71bfe7678915",
+      "name": "PB-TOKEN"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://pb.levelingupdata.com/api/trial/check",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -832,
+        -688
+      ],
+      "id": "d03cf70a-a043-4a4a-b9a1-a77dda4d6b9c",
+      "name": "HTTP Request18",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "url": "=https://pb.levelingupdata.com/api/collections/users/records?filter=(email=\"rajawat.ajay@ehrlogic.com\")",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -912,
+        2624
+      ],
+      "id": "488a5468-b4d1-4072-b3d1-029182622ca0",
+      "name": "users"
+    },
+    {
+      "parameters": {
+        "url": "https://slack.com/api/users.info",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "user",
+              "value": "={{ $json.authed_user.id }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1136,
+        2624
+      ],
+      "id": "c1c0bd65-adac-4442-a47b-fec9f8f3c124",
+      "name": "user info01"
+    }
+  ],
+  "pinData": {
+    "Slack webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.levelingupdata.com",
+            "user-agent": "Slackbot 1.0 (+https://api.slack.com/robots)",
+            "content-length": "1462",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "44.200.153.89",
+            "cf-ipcountry": "US",
+            "cf-ray": "98e99755acff5d04-IAD",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-warp-tag-id": "bdee9639-2ca7-4bd2-a7b1-c64cc7d1f6ee",
+            "connection": "keep-alive",
+            "content-type": "application/json",
+            "x-forwarded-for": "44.200.153.89",
+            "x-forwarded-proto": "https",
+            "x-slack-request-timestamp": "1760471273",
+            "x-slack-signature": "v0=dbb33b2276b6a4b8b030e1163324af9fe97bdd2fdbe58edf3269d7f0e7dd6df1"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "token": "xTuP2Js3XxAj3Rkd5q5zeYK0",
+            "team_id": "T08BM8H5DCZ",
+            "context_team_id": "T08BM8H5DCZ",
+            "context_enterprise_id": null,
+            "api_app_id": "A0999UD0HGF",
+            "event": {
+              "user": "U0999UJHVKR",
+              "type": "message",
+              "ts": "1760471272.631669",
+              "bot_id": "B0999UJHVK9",
+              "app_id": "A0999UD0HGF",
+              "text": "There's an issue with your given document, Please Try Again!!",
+              "team": "T08BM8H5DCZ",
+              "bot_profile": {
+                "id": "B0999UJHVK9",
+                "deleted": false,
+                "name": "Starfish",
+                "updated": 1758598727,
+                "app_id": "A0999UD0HGF",
+                "user_id": "U0999UJHVKR",
+                "icons": {
+                  "image_36": "https://avatars.slack-edge.com/2025-09-22/9564030571830_1a00457f2e714212ae8c_36.png",
+                  "image_48": "https://avatars.slack-edge.com/2025-09-22/9564030571830_1a00457f2e714212ae8c_48.png",
+                  "image_72": "https://avatars.slack-edge.com/2025-09-22/9564030571830_1a00457f2e714212ae8c_72.png"
+                },
+                "team_id": "T08BM8H5DCZ"
+              },
+              "blocks": [
+                {
+                  "type": "rich_text",
+                  "block_id": "HqohL",
+                  "elements": [
+                    {
+                      "type": "rich_text_section",
+                      "elements": [
+                        {
+                          "type": "text",
+                          "text": "There's an issue with your given document, Please Try Again!!"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "channel": "D0999UJMUS3",
+              "event_ts": "1760471272.631669",
+              "channel_type": "im"
+            },
+            "type": "event_callback",
+            "event_id": "Ev09LASQV2TV",
+            "event_time": 1760471272,
+            "authorizations": [
+              {
+                "enterprise_id": null,
+                "team_id": "T08BM8H5DCZ",
+                "user_id": "U0999UJHVKR",
+                "is_bot": true,
+                "is_enterprise_install": false
+              }
+            ],
+            "is_ext_shared_channel": false,
+            "event_context": "4-eyJldCI6Im1lc3NhZ2UiLCJ0aWQiOiJUMDhCTThINURDWiIsImFpZCI6IkEwOTk5VUQwSEdGIiwiY2lkIjoiRDA5OTlVSk1VUzMifQ"
+          },
+          "webhookUrl": "https://n8n.levelingupdata.com/webhook/events",
+          "executionMode": "production"
+        }
+      }
+    ],
+    "Webhook2": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.levelingupdata.com",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "accept-encoding": "gzip, br",
+            "accept-language": "en-US,en;q=0.9",
+            "cache-control": "max-age=0",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "110.226.173.236",
+            "cf-ipcountry": "IN",
+            "cf-ray": "995175264d62304f-MRS",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-warp-tag-id": "bf0200bc-6314-46ca-b02c-a3496df98675",
+            "connection": "keep-alive",
+            "cookie": "_ga=GA1.1.604789802.1752588389; rl_page_init_referrer=RudderEncrypt%3AU2FsdGVkX184frGoNY0ZixR7HyPBjWJG2%2F6ueqK%2FBvY%3D; rl_page_init_referring_domain=RudderEncrypt%3AU2FsdGVkX19LDdrwbv1%2BHOobIyr91eEMA3YMIHUz4m0%3D; _ga_38BXJXD55B=GS2.1.s1758624493$o8$g1$t1758624508$j45$l0$h1133106735; rl_anonymous_id=RudderEncrypt%3AU2FsdGVkX19b7JHhvtLBh%2FSYRxgMqJ5so5sldXKpXHi163MqwwFegjUhjsG5rNKdknfA%2BPnmVL0%2Bg9yyuh8awg%3D%3D; rl_user_id=RudderEncrypt%3AU2FsdGVkX18vaeBxojwuahnBw%2F0zxbdWXCy9wz38E0MD9E3FiC2qVIJawLRXidXgtFDZOCdt1KOixGHBA%2F%2FRzuQF%2BJPVK7uho%2FxgSG%2BqIoUklSw86i6MG5udoZ8CVK1nrFiZCOB4xqz3eyCR%2F2KiAZyTP8FYdsa9ouOBUn79CRc%3D; rl_trait=RudderEncrypt%3AU2FsdGVkX1%2BYxO6Pk%2FToFNtMy73wIyVK8kCp9x0oqnMVLm6%2BBIRSRgmNvUpvwscqRfszn5grhk5R%2FNrNXn1bWh%2FeP6GAbbsoOzNEx42dgfqc2vJiDa4WLO8ktT8zBMlaAhNG1TTxPhkRAHdOd4IHlZtvjDA4n0wDkPWC72WYv%2B8%3D; rl_session=RudderEncrypt%3AU2FsdGVkX19LSZPLsN2TWoSuf8Gg55BQoVa%2Fxu9Gl0URl2G4uExqiaDVowbDXxPtYcziil2Lelvoy4GBGr4XUUbdEskQUvdqZW2r2ufv01hnCTonuMW9CL0XHx7ghr7nSagx0ApZN6v0lmoNxgtBQw%3D%3D; ph_phc_4URIAm1uYfJO7j8kWSe0J8lc8IqnstRLS7Jx8NcakHo_posthog=%7B%22distinct_id%22%3A%22e7d928c673e7236908336cdcf9195030b7ffe17055bbf6ca859c44efe3ea7baa%23d403153b-1b7f-4d9e-b7c1-1baf5e3edd30%22%2C%22%24sesid%22%3A%5B1758799795695%2C%22019980a3-15f2-70e3-8a59-4bd2bef1bb5e%22%2C1758799795695%5D%2C%22%24epp%22%3Atrue%2C%22%24initial_person_info%22%3A%7B%22r%22%3A%22%24direct%22%2C%22u%22%3A%22https%3A%2F%2Fn8n.levelingupdata.com%2Fsignin%3Fredirect%3D%25252F%22%7D%7D; cf_clearance=u9_P90yS16BR4cV97IF7sNa40AN8NuL505F4KlxQ6pU-1761560125-1.2.1.1-4q57_Qwiqf1yJrPe5Fz8KXaVuZJq0hp.FVb3YF18wsqQdDH9bDGxV_n8cfQpQb3tQCTxAcXCm_W2PJ12zrGDVguac.iBPv_pcTQRoPfK03XrPbdkGxXmgyEtPwmaKibilBpaCwKQnZoBTTMnCbQCJW_A7BnnPKsS8KZQtrHdVaEDvCIlYXUWVAYKdZdAbMUJ.vACZzNoVhviHGJFkEoMxfiUPCax4IQ6BSQgplLjYlM",
+            "priority": "u=0, i",
+            "sec-ch-ua": "\"Google Chrome\";v=\"141\", \"Not?A_Brand\";v=\"8\", \"Chromium\";v=\"141\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "document",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-site": "cross-site",
+            "sec-fetch-user": "?1",
+            "upgrade-insecure-requests": "1",
+            "x-forwarded-for": "110.226.173.236",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {
+            "code": "9756843096916.9771123084419.5eb603c7bdc015cd58121c405e8185ba34e67b3479d232d67cc22c0e4bbec8a9",
+            "state": ""
+          },
+          "body": {},
+          "webhookUrl": "https://n8n.levelingupdata.com/webhook/slack-oauth",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "If": {
+      "main": [
+        [
+          {
+            "node": "AuthoriserNode1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AuthoriserNode2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Move Binary Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "AuthoriserNode4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Name matching": {
+      "main": [
+        [
+          {
+            "node": "If14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Create a row2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders": {
+      "main": [
+        [
+          {
+            "node": "Name matching",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "If15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Check-pdf",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "FileInfo1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "FileInfo2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request5": {
+      "main": [
+        [
+          {
+            "node": "nocodb_slack_user",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request18",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request7": {
+      "main": [
+        [
+          {
+            "node": "Create a row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request6": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode": {
+      "main": [
+        [
+          {
+            "node": "If5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If5": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode1": {
+      "main": [
+        [
+          {
+            "node": "If6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If6": {
+      "main": [
+        [
+          {
+            "node": "FileInfo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode2": {
+      "main": [
+        [
+          {
+            "node": "If7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If7": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode5": {
+      "main": [
+        [
+          {
+            "node": "If11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If11": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook2": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode4": {
+      "main": [
+        [
+          {
+            "node": "If8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If8": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request8": {
+      "main": [
+        []
+      ]
+    },
+    "If13": {
+      "main": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AuthoriserNode5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If15": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "If22",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File1": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If14": {
+      "main": [
+        [
+          {
+            "node": "AuthoriserNode7",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode7": {
+      "main": [
+        [
+          {
+            "node": "If16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If16": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FileInfo": {
+      "main": [
+        [
+          {
+            "node": "File-download",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File-download": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AuthoriserNode10",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FileInfo1": {
+      "main": [
+        [
+          {
+            "node": "File-download1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File-download1": {
+      "main": [
+        [
+          {
+            "node": "OCR request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FileInfo2": {
+      "main": [
+        [
+          {
+            "node": "File-download2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File-download2": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OCR request": {
+      "main": [
+        [
+          {
+            "node": "If9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If9": {
+      "main": [
+        [
+          {
+            "node": "AuthoriserNode8",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If10": {
+      "main": [
+        [
+          {
+            "node": "AuthoriserNode9",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AuthoriserNode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode8": {
+      "main": [
+        [
+          {
+            "node": "If17",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If17": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If18": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode9": {
+      "main": [
+        [
+          {
+            "node": "If18",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If19": {
+      "main": [
+        [
+          {
+            "node": "Processing Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode10": {
+      "main": [
+        [
+          {
+            "node": "If19",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request9": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode3": {
+      "main": [
+        [
+          {
+            "node": "If12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If12": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If20": {
+      "main": [
+        [
+          {
+            "node": "AuthoriserNode11",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AuthoriserNode3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If21": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode11": {
+      "main": [
+        [
+          {
+            "node": "If21",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If22": {
+      "main": [
+        [
+          {
+            "node": "AuthoriserNode12",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Convert to File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If23": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode12": {
+      "main": [
+        [
+          {
+            "node": "If23",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook4": {
+      "main": [
+        [
+          {
+            "node": "If24",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If24": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook3": {
+      "main": [
+        []
+      ]
+    },
+    "Slack webhook": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp webhook": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete a file": {
+      "main": [
+        [
+          {
+            "node": "If26",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders1": {
+      "main": [
+        [
+          {
+            "node": "Delete a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If26": {
+      "main": [
+        [
+          {
+            "node": "AuthoriserNode13",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AuthoriserNode14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If25": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode13": {
+      "main": [
+        [
+          {
+            "node": "If27",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If27": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If28": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request17",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode14": {
+      "main": [
+        [
+          {
+            "node": "If28",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait2": {
+      "main": [
+        [
+          {
+            "node": "If13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent2": {
+      "main": [
+        [
+          {
+            "node": "If20",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store2",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store2": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If30",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If31": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AuthoriserNode15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move Binary Data": {
+      "main": [
+        [
+          {
+            "node": "form-vrify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If30": {
+      "main": [
+        [
+          {
+            "node": "If25",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "message-verify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row2": {
+      "main": [
+        []
+      ]
+    },
+    "Check-pdf": {
+      "main": [
+        [
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "message-verify": {
+      "main": [
+        [
+          {
+            "node": "If31",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "form-vrify": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "pb_slack_user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "pb_slack_status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "nocodb_slack_user": {
+      "main": [
+        []
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If29": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AuthoriserNode15": {
+      "main": [
+        [
+          {
+            "node": "If29",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PB-TOKEN": {
+      "main": [
+        []
+      ]
+    },
+    "users": {
+      "main": [
+        [
+          {
+            "node": "PB-TOKEN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "user info01": {
+      "main": [
+        [
+          {
+            "node": "users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d1aec5c3-d221-4cf7-b369-23bcdefa73e5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e7d928c673e7236908336cdcf9195030b7ffe17055bbf6ca859c44efe3ea7baa"
+  },
+  "id": "p0zJQfsU0bu47An1",
+  "tags": [
+    {
+      "createdAt": "2025-09-24T07:18:02.036Z",
+      "updatedAt": "2025-09-24T07:18:02.036Z",
+      "id": "6aXgmjds77echr5p",
+      "name": "production"
+    },
+    {
+      "createdAt": "2025-09-24T07:18:07.774Z",
+      "updatedAt": "2025-09-24T07:18:07.774Z",
+      "id": "SQIJ84ws2gRo8okZ",
+      "name": "LIVE"
+    }
+  ]
+}

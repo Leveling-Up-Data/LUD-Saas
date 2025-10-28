@@ -61,7 +61,8 @@ export default function Dashboard() {
         const user = await pb.collection("users").getOne(authUser.id);
 
         // Get subscription if exists
-        let subscription = null;
+        let subscription: any = null;
+        let trialUsage: any = null;
         try {
           const subscriptions = await pb
             .collection("subscriptions")
@@ -74,6 +75,66 @@ export default function Dashboard() {
           }
         } catch (error) {
           // No subscription found, that's okay
+        }
+
+        // Fallback to Free Trial if no paid subscription: use trial_usage collection
+        if (!subscription) {
+          try {
+            const trials = await pb.collection('trial_usage').getList(1, 1, {
+              filter: `user_id = "${authUser.id}"`,
+              sort: '-created',
+            });
+            const trial = trials.items[0];
+            if (trial) {
+              trialUsage = {
+                id: trial.id,
+                request_count: Number(
+                  (trial as any).request_count ?? (trial as any).total_request_count ?? 0
+                ),
+                request_total_limit: Number(
+                  (trial as any).request_total_limit ?? (trial as any).total_request_limit ?? 50
+                ),
+                trial_start_date: trial.trial_start_date,
+                trial_end_date: trial.trial_end_date,
+              };
+              const now = Date.now();
+              const end = trial.trial_end_date ? new Date(trial.trial_end_date).getTime() : 0;
+              const inWindow = end > now;
+              const used = Number(
+                (trial as any).request_count ?? (trial as any).total_request_count ?? 0
+              );
+              const limit = Number(
+                (trial as any).request_total_limit ?? (trial as any).total_request_limit ?? 50
+              );
+              const withinQuota = used < limit;
+              // Self-heal incorrect limit values in PocketBase (set to 50 if 0 or missing)
+              if (!limit || Number(limit) === 0) {
+                try {
+                  await pb.collection('trial_usage').update(trial.id, {
+                    request_total_limit: 50,
+                    total_request_limit: 50,
+                  });
+                  (trial as any).request_total_limit = 50;
+                  (trial as any).total_request_limit = 50;
+                  trialUsage.request_total_limit = 50;
+                } catch (_) {
+                  // ignore if we cannot update; UI will still treat limit as 50 for gating
+                }
+              }
+              if (inWindow && withinQuota) {
+                subscription = {
+                  id: trial.id,
+                  plan: 'Free Trial',
+                  status: 'trialing',
+                  currentPeriodEnd: trial.trial_end_date,
+                  amount: 0,
+                  trialEnd: trial.trial_end_date,
+                };
+              }
+            }
+          } catch (_) {
+            // ignore
+          }
         }
 
         // Get recently accepted invites (users who signed up with invitedBy = current user)
@@ -112,14 +173,15 @@ export default function Dashboard() {
           },
           subscription: subscription
             ? {
-                id: subscription.id,
-                plan: subscription.plan,
-                status: subscription.status,
-                currentPeriodEnd: subscription.currentPeriodEnd,
-                amount: subscription.amount,
-                trialEnd: subscription.trialEnd,
-              }
+              id: subscription.id,
+              plan: subscription.plan,
+              status: subscription.status,
+              currentPeriodEnd: subscription.currentPeriodEnd,
+              amount: subscription.amount,
+              trialEnd: subscription.trialEnd,
+            }
             : undefined,
+          trialUsage,
           acceptedInvites,
         };
       } catch (e) {
@@ -169,6 +231,15 @@ export default function Dashboard() {
 
   const user = (userData as any)?.user;
   const subscription = (userData as any)?.subscription;
+  const trialUsage = (userData as any)?.trialUsage as
+    | {
+      id: string;
+      request_count: number;
+      request_total_limit: number;
+      trial_start_date?: string;
+      trial_end_date?: string;
+    }
+    | undefined;
   const displayName =
     (user?.name && String(user.name).trim()) ||
     (user?.username && String(user.username).trim()) ||
@@ -214,12 +285,12 @@ export default function Dashboard() {
 
   const accepted = (userData as any)?.acceptedInvites as
     | Array<{
-        id: string;
-        email: string;
-        created: string;
-        name?: string;
-        username?: string;
-      }>
+      id: string;
+      email: string;
+      created: string;
+      name?: string;
+      username?: string;
+    }>
     | undefined;
   const acceptedActivities = (accepted || []).map((u) => ({
     icon: UserPlus,
@@ -321,17 +392,46 @@ export default function Dashboard() {
   // Calculate trial days remaining
   const trialDaysRemaining = subscription?.trialEnd
     ? Math.max(
-        0,
-        Math.ceil(
-          (new Date(subscription.trialEnd).getTime() - Date.now()) /
-            (1000 * 60 * 60 * 24)
-        )
+      0,
+      Math.ceil(
+        (new Date(subscription.trialEnd).getTime() - Date.now()) /
+        (1000 * 60 * 60 * 24)
       )
+    )
     : 0;
 
   const trialProgress = subscription?.trialEnd
     ? ((14 - trialDaysRemaining) / 14) * 100
     : 0;
+
+  const handleManageSubscription = async () => {
+    try {
+      // If we don't know the plan yet, send user to pricing to pick one
+      if (!subscription?.plan) {
+        setLocation('/pricing');
+        return;
+      }
+
+      // Find the matching product to get its Stripe Price ID
+      const products = await pb.collection('products').getFullList({ sort: 'priority' });
+      const product = products.find((p: any) =>
+        String(p.name).toLowerCase() === String(subscription.plan).toLowerCase()
+      );
+
+      if (product?.stripePriceId) {
+        setLocation(`/checkout?product=${product.id}&price=${product.stripePriceId}`);
+      } else {
+        setLocation('/pricing');
+      }
+    } catch (error) {
+      toast({
+        title: 'Unable to open billing',
+        description: 'Please try again from the Pricing page.',
+        variant: 'destructive',
+      });
+      setLocation('/pricing');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -375,20 +475,18 @@ export default function Dashboard() {
                     className="bg-primary/10 text-primary"
                     data-testid="badge-subscription-status"
                   >
-                    {subscription?.status === "trialing"
-                      ? "Free Trial"
-                      : subscription?.status || "Active"}
+                    {!subscription ? "None" : subscription?.status === "trialing" ? "Free Trial" : subscription?.status || "Active"}
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Plan</p>
                     <p
                       className="text-lg font-semibold text-foreground capitalize"
                       data-testid="text-subscription-plan"
                     >
-                      {subscription?.plan || "No active subscription"}
+                      {subscription?.plan || "No active plan"}
                     </p>
                   </div>
                   <div>
@@ -399,50 +497,71 @@ export default function Dashboard() {
                       className="text-lg font-semibold text-foreground"
                       data-testid="text-subscription-amount"
                     >
-                      $
-                      {subscription
-                        ? (subscription.amount / 100).toFixed(2)
-                        : "0.00"}
+                      {subscription ? `$${(subscription.amount / 100).toFixed(2)}` : "$0.00"}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Next Billing Date
-                    </p>
-                    <p
-                      className="text-lg font-semibold text-foreground"
-                      data-testid="text-next-billing"
-                    >
-                      {subscription?.currentPeriodEnd
-                        ? new Date(
-                            subscription.currentPeriodEnd
-                          ).toLocaleDateString("en-US", {
+                </div>
+
+                {trialUsage && (
+                  <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Requests Used</p>
+                      <div className="space-y-2">
+                        <Progress
+                          value={Math.min(100, Math.max(0, (trialUsage.request_count / Math.max(1, trialUsage.request_total_limit)) * 100))}
+                          className="h-2"
+                        />
+                        <p className="text-sm text-foreground" data-testid="text-trial-requests">
+                          {trialUsage.request_count} / {trialUsage.request_total_limit}
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Trial Ends</p>
+                      <p className="text-lg font-semibold text-foreground" data-testid="text-trial-end">
+                        {trialUsage.trial_end_date
+                          ? new Date(trialUsage.trial_end_date).toLocaleDateString("en-US", {
                             year: "numeric",
                             month: "short",
                             day: "numeric",
                           })
-                        : "Not set"}
-                    </p>
+                          : "—"}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="flex flex-col space-y-3">
-                <Button
-                  variant="outline"
-                  className="flex items-center space-x-2"
-                  data-testid="button-upgrade-plan"
-                >
-                  <ArrowUp className="h-4 w-4" />
-                  <span>Upgrade Plan</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="text-muted-foreground hover:text-foreground"
-                  data-testid="button-manage-subscription"
-                >
-                  Manage Subscription
-                </Button>
+                {!subscription ? (
+                  <Button
+                    className="flex items-center space-x-2"
+                    data-testid="button-choose-plan"
+                    onClick={() => setLocation('/pricing')}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                    <span>Choose a Plan</span>
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="flex items-center space-x-2"
+                      data-testid="button-upgrade-plan"
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                      <span>Upgrade Plan</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-foreground"
+                      data-testid="button-manage-subscription"
+                      onClick={handleManageSubscription}
+                    >
+                      Manage Subscription
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
 

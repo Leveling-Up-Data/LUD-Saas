@@ -10,9 +10,8 @@ import nodemailer from "nodemailer";
 let stripe: Stripe | null = null;
 
 if (process.env.STRIPE_SECRET_KEY) {
-  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2025-09-30.clover",
-  });
+  // Use library default API version to avoid invalid/unknown versions
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 } else {
   console.warn('⚠️  Stripe API keys not configured. Payment features will be disabled.');
   console.warn('To enable payments, add STRIPE_SECRET_KEY and VITE_STRIPE_PUBLIC_KEY to your secrets.');
