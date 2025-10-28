@@ -15,7 +15,7 @@ export function PricingCard({ product, isPopular = false, onSelect }: PricingCar
   const features = Array.isArray(product.features) ? product.features : [];
 
   return (
-    <Card className={`relative ${isPopular ? 'border-primary border-2 shadow-xl' : 'border-border'} hover:shadow-lg transition-all duration-200 hover:-translate-y-1`}>
+    <Card className={`relative h-full flex flex-col ${isPopular ? 'border-primary border-2 shadow-xl' : 'border-border'} hover:shadow-lg transition-all duration-200 hover:-translate-y-1`}>
       {isPopular && (
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
           <Badge className="bg-gradient-to-r from-primary to-secondary text-white px-4 py-1 shadow-lg">
@@ -23,7 +23,7 @@ export function PricingCard({ product, isPopular = false, onSelect }: PricingCar
           </Badge>
         </div>
       )}
-      
+
       <CardHeader className="text-center pb-6">
         <CardTitle className="text-2xl font-bold">{product.name}</CardTitle>
         <CardDescription>
@@ -31,7 +31,7 @@ export function PricingCard({ product, isPopular = false, onSelect }: PricingCar
           {product.name === 'Professional' && 'For growing businesses'}
           {product.name === 'Enterprise' && 'For large organizations'}
         </CardDescription>
-        
+
         <div className="mt-6">
           <div className="flex items-baseline justify-center">
             <span className="text-5xl font-bold text-foreground">${price}</span>
@@ -40,8 +40,8 @@ export function PricingCard({ product, isPopular = false, onSelect }: PricingCar
           <p className="text-sm text-muted-foreground mt-2">Billed monthly</p>
         </div>
       </CardHeader>
-      
-      <CardContent className="space-y-6">
+
+      <CardContent className="space-y-6 flex-1 flex flex-col">
         <ul className="space-y-4">
           {features.map((feature, index) => (
             <li key={index} className="flex items-start">
@@ -50,17 +50,16 @@ export function PricingCard({ product, isPopular = false, onSelect }: PricingCar
             </li>
           ))}
         </ul>
-        
+
         <Button
           onClick={() => onSelect(product)}
-          className={isPopular 
-            ? "w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90 shadow-lg" 
-            : "w-full"
-          }
+          className={(isPopular
+            ? "w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90 shadow-lg"
+            : "w-full") + " mt-auto"}
           variant={isPopular ? "default" : "outline"}
           data-testid={`button-select-${product.name.toLowerCase()}`}
         >
-          {product.name === 'Enterprise' ? 'Contact Sales' : 'Get Started'}
+          {product.name === 'Enterprise' ? 'Contact Sales' : product.name === 'Free Trial' ? 'Start Free Trial' : 'Get Started'}
         </Button>
       </CardContent>
     </Card>

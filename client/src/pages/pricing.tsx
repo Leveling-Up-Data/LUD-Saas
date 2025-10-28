@@ -8,6 +8,7 @@ import { Footer } from "@/components/footer";
 import { pb } from "@/lib/pocketbase";
 import { Loader2 } from "lucide-react";
 import type { Product } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Pricing() {
   const [, setLocation] = useLocation();
@@ -17,26 +18,131 @@ export default function Pricing() {
   });
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
+  const { toast } = useToast();
+
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ['products'],
     queryFn: async () => {
-      const records = await pb.collection('products').getFullList({
-        sort: 'priority'
-      });
-      return records.map(record => ({
-        id: record.id,
-        name: record.name,
-        price: record.price,
-        stripePriceId: record.stripePriceId,
-        features: record.features || [],
-        maxUsers: record.maxUsers,
-        storage: record.storage,
-        priority: record.priority
-      }));
+      try {
+        const records = await pb.collection('products').getFullList({ sort: 'priority' });
+        const mapped = records.map(record => ({
+          id: record.id,
+          name: record.name,
+          price: record.price,
+          stripePriceId: record.stripePriceId,
+          features: record.features || [],
+          maxUsers: record.maxUsers,
+          storage: record.storage,
+          priority: record.priority
+        })) as Product[];
+
+        // Always include Free Trial card at the front if not present
+        const hasFreeTrial = mapped.some(p => String(p.name).toLowerCase() === 'free trial');
+        const withFreeTrial = hasFreeTrial
+          ? mapped
+          : ([
+            {
+              id: 'free-trial',
+              name: 'Free Trial',
+              price: 0,
+              stripePriceId: '',
+              features: ['2-day free trial', '50 total requests'],
+              maxUsers: 0,
+              storage: '—',
+              priority: -1,
+            },
+            ...mapped,
+          ] as Product[]);
+
+        if (Array.isArray(withFreeTrial) && withFreeTrial.length > 0) return withFreeTrial;
+      } catch (_) {
+        // Fall back to server products below
+      }
+
+      // Fallback: fetch server-provided products for display if PocketBase unavailable/empty
+      try {
+        const res = await fetch('/api/products');
+        if (!res.ok) throw new Error('Failed to load fallback products');
+        const data = await res.json();
+        const mapped = (Array.isArray(data) ? data : []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          // Fallback set empty price id; selection handler will handle gracefully
+          stripePriceId: p.stripePriceId || '',
+          features: p.features || [],
+          maxUsers: p.maxUsers,
+          storage: p.storage,
+          priority: p.priority,
+        })) as Product[];
+
+        const hasFreeTrial = mapped.some(p => String(p.name).toLowerCase() === 'free trial');
+        const withFreeTrial = hasFreeTrial
+          ? mapped
+          : ([
+            {
+              id: 'free-trial',
+              name: 'Free Trial',
+              price: 0,
+              stripePriceId: '',
+              features: ['2-day free trial', '50 total requests'],
+              maxUsers: 0,
+              storage: '—',
+              priority: -1,
+            },
+            ...mapped,
+          ] as Product[]);
+        return withFreeTrial;
+      } catch (_) {
+        return [] as Product[];
+      }
     }
   });
 
   const isAuthenticated = pb.authStore.isValid;
+
+  async function startFreeTrial() {
+    try {
+      const userId = pb.authStore.model?.id;
+      if (!userId) {
+        setAuthModal({ open: true, mode: 'signup' });
+        return;
+      }
+
+      // If trial already exists for user, route to dashboard
+      try {
+        const existing = await pb.collection('trial_usage').getList(1, 1, {
+          filter: `user_id = "${userId}"`,
+        });
+        if (existing?.items?.length > 0) {
+          toast({ title: 'Trial already active', description: 'You can start using your trial now.' });
+          setLocation('/dashboard');
+          return;
+        }
+      } catch (_) {
+        // ignore and attempt to create
+      }
+
+      const now = new Date();
+      const end = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+
+      await pb.collection('trial_usage').create({
+        user_id: userId,
+        request_count: 0,
+        total_request_count: 0,
+        request_total_limit: 50,
+        total_request_limit: 50,
+        trial_start_date: now.toISOString(),
+        trial_end_date: end.toISOString(),
+      });
+
+      toast({ title: 'Free trial started', description: 'You have 2 days and 50 total requests.' });
+      setLocation('/dashboard');
+    } catch (error: any) {
+      const message = error?.message || 'Failed to start free trial.';
+      toast({ title: 'Error', description: message, variant: 'destructive' });
+    }
+  }
 
   const handleProductSelect = (product: Product) => {
     if (!isAuthenticated) {
@@ -45,18 +151,34 @@ export default function Pricing() {
       return;
     }
 
+    if (product.name === 'Free Trial') {
+      void startFreeTrial();
+      return;
+    }
+
     if (product.name === 'Enterprise') {
       setLocation('/contact');
       return;
     }
 
-    // Redirect to checkout with selected product
-    setLocation(`/checkout?product=${product.id}&price=${product.stripePriceId}`);
+    // Ensure we have a Stripe Price ID; if missing, guide the user
+    if (product.stripePriceId && String(product.stripePriceId).trim().length > 0) {
+      setLocation(`/checkout?product=${product.id}&price=${product.stripePriceId}`);
+    } else {
+      toast({
+        title: 'Plan not available for checkout',
+        description: 'Please contact us or choose a different plan.',
+        variant: 'destructive',
+      });
+      setLocation('/contact');
+    }
   };
 
   const handleAuthSuccess = () => {
     if (selectedProduct) {
-      if (selectedProduct.name === 'Enterprise') {
+      if (selectedProduct.name === 'Free Trial') {
+        void startFreeTrial();
+      } else if (selectedProduct.name === 'Enterprise') {
         setLocation('/contact');
       } else {
         setLocation(`/checkout?product=${selectedProduct.id}&price=${selectedProduct.stripePriceId}`);
@@ -90,15 +212,18 @@ export default function Pricing() {
           </div>
 
           {products && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-10 mb-20">
-              {products.map((product, index) => (
-                <PricingCard
-                  key={product.id}
-                  product={product}
-                  isPopular={product.name === 'Professional'}
-                  onSelect={handleProductSelect}
-                />
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10 mb-20 items-stretch">
+              {products
+                .filter((p) => String(p.name).toLowerCase() !== 'enterprise')
+                .map((product) => (
+                  <div key={product.id} className="h-full">
+                    <PricingCard
+                      product={product}
+                      isPopular={product.name === 'Professional'}
+                      onSelect={handleProductSelect}
+                    />
+                  </div>
+                ))}
             </div>
           )}
 
