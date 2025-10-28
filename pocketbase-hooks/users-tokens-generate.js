@@ -1,5 +1,4 @@
 // PocketBase Hook: Generate API token for user_tokens on create
-// Place this file in your PocketBase hooks directory
 
 const crypto = require('crypto');
 

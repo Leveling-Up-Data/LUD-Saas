@@ -1,5 +1,3 @@
-// PocketBase Hook: Sync `active` flag from `users` to `slack_user` by email
-// Place this file in your PocketBase hooks directory
 
 async function syncSlackUserActiveByEmail(email, isActive) {
   if (!email) return;
