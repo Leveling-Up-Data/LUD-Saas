@@ -16,6 +16,7 @@ import { Footer } from "@/components/footer";
 import { pb } from "@/lib/pocketbase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { getApiTokenById } from "@/config/api-tokens";
 import {
   Users,
   Database,
@@ -48,26 +49,44 @@ export default function Dashboard() {
     token: "",
     tokenName: "",
   });
+  // Small modal used to surface the user's API token (read-only)
   const { toast } = useToast();
 
   // Fetch the authenticated user's profile and latest subscription (if any)
   const { data: userData, isLoading } = useQuery({
+    // Invalidate user data whenever the authenticated user's id changes
     queryKey: ["user", authUser?.id],
+    // Only run when we know auth state and have a valid user id
     enabled: isAuthenticated && !authLoading && !!authUser?.id,
     queryFn: async () => {
       try {
+        // Safety check: no auth => no data
         if (!authUser?.id) return null;
 
-      // Get user data from PocketBase (auth collection)
-      const user = await pb.collection('users').getOne(pb.authStore.model.id);
+        // Get user data from PocketBase (auth collection)
+        const user = await pb.collection('users').getOne(authUser.id);
 
-      // Try to load most recent subscription for this user; it's fine if none exists
-      let subscription = null;
-      try {
-        const subscriptions = await pb
-          .collection("subscriptions")
-          .getList(1, 1, {
-            filter: `userId = "${pb.authStore.model.id}"`,
+        // Try to load most recent subscription for this user; it's fine if none exists
+        let subscription: any = null;
+        try {
+          const subscriptions = await pb
+            .collection("subscriptions")
+            .getList(1, 1, {
+              filter: `userId = "${authUser.id}"`,
+              sort: "-created",
+            });
+          if (subscriptions.items.length > 0) {
+            subscription = subscriptions.items[0];
+          }
+        } catch (_) {
+          // No subscription found
+        }
+
+        // Recently accepted invites (users who signed up with invitedBy = current user)
+        let acceptedInvites: Array<{ id: string; email: string; created: string; name?: string; username?: string; }> = [];
+        try {
+          const invitedUsers = await pb.collection("users").getList(1, 5, {
+            filter: `invitedBy = "${authUser.id}"`,
             sort: "-created",
           });
           acceptedInvites = invitedUsers.items.map((u: any) => ({
@@ -77,10 +96,11 @@ export default function Dashboard() {
             name: u.name,
             username: u.username,
           }));
-        } catch (error) {
-          // Ignore if no invited users or field doesn't exist
+        } catch (_) {
+          // ignore
         }
 
+        // Shape the minimal data the UI needs to render
         return {
           user: {
             id: user.id,
@@ -93,13 +113,13 @@ export default function Dashboard() {
           },
           subscription: subscription
             ? {
-                id: subscription.id,
-                plan: subscription.plan,
-                status: subscription.status,
-                currentPeriodEnd: subscription.currentPeriodEnd,
-                amount: subscription.amount,
-                trialEnd: subscription.trialEnd,
-              }
+              id: subscription.id,
+              plan: subscription.plan,
+              status: subscription.status,
+              currentPeriodEnd: subscription.currentPeriodEnd,
+              amount: subscription.amount,
+              trialEnd: subscription.trialEnd,
+            }
             : undefined,
           acceptedInvites,
         };
@@ -133,6 +153,7 @@ export default function Dashboard() {
   if (!isAuthenticated) return null;
 
   if (isLoading) {
+    // Skeleton while dashboard data loads
     return (
       <div className="min-h-screen bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -151,11 +172,52 @@ export default function Dashboard() {
 
   const user = (userData as any)?.user;
   const subscription = (userData as any)?.subscription;
+  // Normalize a friendly name for the header from name/username/email
   const displayName =
     (user?.name && String(user.name).trim()) ||
     (user?.username && String(user.username).trim()) ||
     (user?.email ? String(user.email).split("@")[0] : "") ||
     "User";
+
+  // Build recent activity. Pull last invite (if any) from localStorage
+  const lastInviteRaw =
+    typeof window !== "undefined" ? localStorage.getItem("lastInvite") : null;
+  let inviteActivity: { email?: string; time?: string } | null = null;
+  if (lastInviteRaw) {
+    try {
+      const parsed = JSON.parse(lastInviteRaw);
+      const at = parsed?.at ? new Date(parsed.at) : null;
+      const rel = at ? timeSince(at) : undefined;
+      inviteActivity = { email: parsed?.email, time: rel };
+    } catch (_) {
+      inviteActivity = null;
+    }
+  }
+
+  function timeSince(date: Date) {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    const intervals: [number, string][] = [
+      [60 * 60 * 24, "day"],
+      [60 * 60, "hour"],
+      [60, "minute"],
+    ];
+    for (const [secs, label] of intervals) {
+      const v = Math.floor(seconds / secs);
+      if (v >= 1) return `${v} ${label}${v > 1 ? "s" : ""} ago`;
+    }
+    return `${seconds} sec${seconds !== 1 ? "s" : ""} ago`;
+  }
+
+  const accepted = (userData as any)?.acceptedInvites as
+    | Array<{ id: string; email: string; created: string; name?: string; username?: string }>
+    | undefined;
+  const acceptedActivities = (accepted || []).map((u) => ({
+    icon: UserPlus,
+    title: "Invite accepted",
+    description: u.email ? `New account: ${u.email}` : "A user accepted your invite",
+    time: timeSince(new Date(u.created)),
+    color: "text-primary",
+  }));
 
   // Project metrics (simple illustrative stats)
   const stats = {
@@ -257,12 +319,12 @@ export default function Dashboard() {
   // Calculate trial days remaining from subscription trial end (if present)
   const trialDaysRemaining = subscription?.trialEnd
     ? Math.max(
-        0,
-        Math.ceil(
-          (new Date(subscription.trialEnd).getTime() - Date.now()) /
-            (1000 * 60 * 60 * 24)
-        )
+      0,
+      Math.ceil(
+        (new Date(subscription.trialEnd).getTime() - Date.now()) /
+        (1000 * 60 * 60 * 24)
       )
+    )
     : 0;
 
   const trialProgress = subscription?.trialEnd
@@ -351,12 +413,12 @@ export default function Dashboard() {
                     >
                       {subscription?.currentPeriodEnd
                         ? new Date(
-                            subscription.currentPeriodEnd
-                          ).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })
+                          subscription.currentPeriodEnd
+                        ).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })
                         : "Not set"}
                     </p>
                   </div>
