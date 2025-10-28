@@ -22,6 +22,7 @@ import { AuthModal } from "@/components/auth-modal";
 import { Footer } from "@/components/footer";
 import { pb } from "@/lib/pocketbase";
 
+
 interface Product {
   id: string;
   name: string;
