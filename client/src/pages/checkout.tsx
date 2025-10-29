@@ -12,7 +12,7 @@ import { Footer } from '@/components/footer';
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { pb } from '@/lib/pocketbase';
-import { Loader2, Shield, CreditCard, Gift } from 'lucide-react';
+import { Loader2, Shield, CreditCard, Gift, CheckCircle2 } from 'lucide-react';
 
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
   console.error('Missing required environment variable: VITE_STRIPE_PUBLIC_KEY');
@@ -21,13 +21,16 @@ if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
 
+interface SelectedPlan {
+  name: string;
+  price: number; // cents
+  stripePriceId: string;
+  features?: string[];
+}
+
 interface CheckoutFormProps {
   clientSecret: string;
-  selectedPlan: {
-    name: string;
-    price: number;
-    stripePriceId: string;
-  };
+  selectedPlan: SelectedPlan;
 }
 
 function CheckoutForm({ clientSecret, selectedPlan }: CheckoutFormProps) {
@@ -172,11 +175,11 @@ function CheckoutForm({ clientSecret, selectedPlan }: CheckoutFormProps) {
         data-testid="button-confirm-payment"
       >
         {isProcessing && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-        Start Free Trial
+        {selectedPlan.price > 0 ? 'Pay and Subscribe' : 'Confirm'}
       </Button>
 
       <p className="text-xs text-center text-muted-foreground">
-        By confirming your subscription, you agree to our Terms of Service. Your subscription will automatically renew after the trial period unless cancelled.
+        By confirming your subscription, you agree to our Terms of Service. Your subscription will automatically renew monthly unless cancelled.
       </p>
     </form>
   );
@@ -185,9 +188,10 @@ function CheckoutForm({ clientSecret, selectedPlan }: CheckoutFormProps) {
 export default function Checkout() {
   const [, setLocation] = useLocation();
   const [clientSecret, setClientSecret] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [selectedPlan, setSelectedPlan] = useState<SelectedPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const [demoMode, setDemoMode] = useState(false);
 
   useEffect(() => {
     if (!pb.authStore.isValid) {
@@ -213,51 +217,72 @@ export default function Checkout() {
       setLocation('/pricing');
       return;
     }
+    // Demo mode: if price looks like a placeholder or Stripe key missing, skip server/Stripe
+    const isPlaceholderPrice = /^price_?demo/i.test(stripePriceId);
+    const stripeKeyMissing = !import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+    if (isPlaceholderPrice || stripeKeyMissing) {
+      (async () => {
+        try {
+          setLoading(true);
+          setDemoMode(true);
+          // Try to fetch product by ID from PocketBase, otherwise from fallback API
+          let product: any = null;
+          if (productId) {
+            try {
+              product = await pb.collection('products').getOne(productId);
+            } catch (_) {
+              // ignore
+            }
+          }
+          if (!product) {
+            try {
+              const res = await fetch('/api/products');
+              const list = await res.json();
+              product = Array.isArray(list) ? list.find((p: any) => String(p.id) === String(productId)) : null;
+              if (!product && Array.isArray(list) && list.length > 0) product = list[0];
+            } catch (_) {
+              // ignore
+            }
+          }
+          if (product) {
+            setSelectedPlan({ name: product.name, price: product.price || 0, stripePriceId: stripePriceId, features: Array.isArray(product.features) ? product.features : [] });
+          } else {
+            setSelectedPlan({ name: 'Selected Plan', price: 0, stripePriceId: stripePriceId, features: [] });
+          }
+          // Set a dummy clientSecret so UI proceeds
+          setClientSecret('demo_secret');
+        } finally {
+          setLoading(false);
+        }
+      })();
+      return;
+    }
 
-    // Create subscription
-    const createSubscription = async () => {
+    // Normal flow: create subscription through PocketBase
+    (async () => {
       try {
         setLoading(true);
-
-        // Call PocketBase custom route for subscription creation
         const data = await pb.send('/api/create-subscription', {
           method: 'POST',
-          body: {
-            userId: pb.authStore.model?.id,
-            stripePriceId
-          }
+          body: { userId: pb.authStore.model?.id, stripePriceId }
         });
-
         if (data.clientSecret) {
           setClientSecret(data.clientSecret);
-
-          // Fetch product details for display
           const products = await pb.collection('products').getFullList();
           const product = products.find((p: any) => p.stripePriceId === stripePriceId);
-
           if (product) {
-            setSelectedPlan({
-              name: product.name,
-              price: product.price,
-              stripePriceId: product.stripePriceId
-            });
+            setSelectedPlan({ name: product.name, price: product.price, stripePriceId: product.stripePriceId, features: Array.isArray(product.features) ? product.features : [] });
           }
         } else {
           throw new Error('Failed to create subscription');
         }
       } catch (error: any) {
-        toast({
-          title: "Subscription Error",
-          description: error.message || "Failed to initialize subscription. Please try again.",
-          variant: "destructive",
-        });
+        toast({ title: "Subscription Error", description: error.message || "Failed to initialize subscription. Please try again.", variant: "destructive" });
         setLocation('/pricing');
       } finally {
         setLoading(false);
       }
-    };
-
-    createSubscription();
+    })();
   }, [toast, setLocation]);
 
   if (loading) {
@@ -293,7 +318,7 @@ export default function Checkout() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Complete Your Purchase</h1>
-          <p className="text-muted-foreground">Start your 14-day free trial today</p>
+          <p className="text-muted-foreground">Enter your payment details to start your subscription</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -324,22 +349,18 @@ export default function Checkout() {
                     <span className="text-muted-foreground">Billing Period</span>
                     <span className="text-foreground">Monthly</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Free Trial</span>
-                    <span className="text-foreground font-medium text-primary">14 days</span>
-                  </div>
                 </div>
 
                 <div className="border-t border-border pt-4">
                   <div className="flex justify-between items-baseline">
                     <span className="text-foreground font-semibold text-lg">Total Today</span>
                     <div className="text-right">
-                      <span className="text-3xl font-bold text-foreground">$0.00</span>
-                      <p className="text-sm text-muted-foreground">First 14 days free</p>
+                      <span className="text-3xl font-bold text-foreground">${priceDisplay}</span>
+                      <p className="text-sm text-muted-foreground">Billed immediately</p>
                     </div>
                   </div>
                   <div className="mt-3 text-sm text-muted-foreground">
-                    <p>Then ${priceDisplay}/month. Cancel anytime.</p>
+                    <p>Renews at ${priceDisplay}/month. Cancel anytime.</p>
                   </div>
                 </div>
               </CardContent>
@@ -351,23 +372,54 @@ export default function Checkout() {
             <Card>
               <CardHeader>
                 <CardTitle>Payment Information</CardTitle>
-                <CardDescription>Enter your payment details to start your free trial</CardDescription>
+                <CardDescription>Enter your payment details to subscribe</CardDescription>
               </CardHeader>
               <CardContent>
-                <Elements
-                  stripe={stripePromise}
-                  options={{
-                    clientSecret,
-                    appearance: {
-                      theme: 'stripe',
-                    }
-                  }}
-                >
-                  <CheckoutForm
-                    clientSecret={clientSecret}
-                    selectedPlan={selectedPlan}
-                  />
-                </Elements>
+                {demoMode ? (
+                  <div className="space-y-5">
+                    <div className="p-4 border border-border rounded-lg bg-card">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
+                        <div className="space-y-2">
+                          <p className="text-foreground font-medium">Demo checkout</p>
+                          <p className="text-sm text-muted-foreground">No real payment will be processed.</p>
+                          <div className="pt-1">
+                            <p className="text-sm text-foreground font-medium">{selectedPlan.name} plan</p>
+                            {Array.isArray(selectedPlan.features) && selectedPlan.features.length > 0 && (
+                              <ul className="list-disc pl-5 mt-2 space-y-1 text-sm text-muted-foreground">
+                                {selectedPlan.features.map((f: string, i: number) => (
+                                  <li key={i}>{String(f)}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border border-border rounded-lg p-3 bg-muted/30">
+                      <span className="text-muted-foreground">Total Today</span>
+                      <span className="text-2xl font-bold text-foreground">${priceDisplay}</span>
+                    </div>
+
+                    <div className="text-xs text-muted-foreground text-right">Renews at ${priceDisplay}/month</div>
+
+                    <Button
+                      className="w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90"
+                      onClick={() => setLocation('/dashboard?payment=success')}
+                      data-testid="button-demo-confirm"
+                    >
+                      Confirm and Continue
+                    </Button>
+                  </div>
+                ) : (
+                  <Elements
+                    stripe={stripePromise}
+                    options={{ clientSecret, appearance: { theme: 'stripe' } }}
+                  >
+                    <CheckoutForm clientSecret={clientSecret} selectedPlan={selectedPlan} />
+                  </Elements>
+                )}
               </CardContent>
             </Card>
           </div>
