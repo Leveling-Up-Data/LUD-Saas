@@ -250,9 +250,11 @@ export default function Dashboard() {
   const stats = {
     users: (userData as any)?.user ? 1 : 0,
     storageUsed: 11, // % of quota used
-    apiRequests: 12500, // requests this month
+    apiRequests: Number(trialUsage?.request_count || 0),
     uptime: 99.99,
   };
+
+  // (Uptime tracker removed by request; displaying static sample uptime)
 
   // Build recent activity. Pull last invite (if any) from localStorage
   const lastInviteRaw =
@@ -271,6 +273,7 @@ export default function Dashboard() {
 
   function timeSince(date: Date) {
     const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds <= 0) return "just now"; // prevent negative relative times for future dates
     const intervals: [number, string][] = [
       [60 * 60 * 24, "day"],
       [60 * 60, "hour"],
@@ -322,9 +325,12 @@ export default function Dashboard() {
       description: subscription?.plan
         ? `${subscription.plan} plan`
         : "Subscription updated",
-      time: subscription?.currentPeriodEnd
-        ? `${timeSince(new Date(subscription.currentPeriodEnd))}`
-        : undefined,
+      time:
+        subscription?.status === "trialing"
+          ? (trialUsage?.trial_start_date
+            ? `${timeSince(new Date(trialUsage.trial_start_date))}`
+            : "just now")
+          : undefined,
       color: "text-secondary",
     },
     {
@@ -403,6 +409,15 @@ export default function Dashboard() {
   const trialProgress = subscription?.trialEnd
     ? ((14 - trialDaysRemaining) / 14) * 100
     : 0;
+
+  function formatCompactNumber(value: number) {
+    if (!Number.isFinite(value)) return '0';
+    const abs = Math.abs(value);
+    if (abs >= 1000000000) return (value / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
+    if (abs >= 1000000) return (value / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (abs >= 1000) return Math.round(value / 1000) + 'K';
+    return String(value);
+  }
 
   const handleManageSubscription = async () => {
     try {
@@ -548,6 +563,7 @@ export default function Dashboard() {
                       variant="outline"
                       className="flex items-center space-x-2"
                       data-testid="button-upgrade-plan"
+                      onClick={() => setLocation('/pricing')}
                     >
                       <ArrowUp className="h-4 w-4" />
                       <span>Upgrade Plan</span>
@@ -655,7 +671,7 @@ export default function Dashboard() {
                 className="text-3xl font-bold text-foreground"
                 data-testid="text-stat-requests"
               >
-                {(stats.apiRequests / 1000).toFixed(0)}K
+                {formatCompactNumber(stats.apiRequests)}
               </p>
             </CardContent>
           </Card>
@@ -795,37 +811,60 @@ export default function Dashboard() {
               <CardDescription>Manage your billing information</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center">
-                    <CreditCard className="h-8 w-8 text-white" />
-                  </div>
-                  <div>
-                    <p
-                      className="font-semibold text-foreground"
-                      data-testid="text-payment-method"
-                    >
-                      •••• •••• •••• 4242
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Expires 12/2025
-                    </p>
-                  </div>
-                </div>
+              {(() => {
+                const isTrial = subscription?.status === "trialing";
+                const hasStripe = Boolean(user?.stripeCustomerId);
+                const hasPaymentMethod = hasStripe && !isTrial;
+                return (
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center">
+                        <CreditCard className="h-8 w-8 text-white" />
+                      </div>
+                      <div>
+                        <p
+                          className="font-semibold text-foreground"
+                          data-testid="text-payment-method"
+                        >
+                          {isTrial
+                            ? "No billing method added"
+                            : hasPaymentMethod
+                              ? "Billing managed via Stripe"
+                              : "No billing method on file"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {isTrial
+                            ? "You're on a free trial. No billing method required yet."
+                            : hasPaymentMethod
+                              ? "Open billing to view or update your payment method."
+                              : "Add a payment method to start a paid plan."}
+                        </p>
+                      </div>
+                    </div>
 
-                <div className="flex space-x-3">
-                  <Button variant="outline" data-testid="button-update-card">
-                    Update Card
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    data-testid="button-remove-card"
-                  >
-                    Remove
-                  </Button>
-                </div>
-              </div>
+                    <div className="flex space-x-3">
+                      {hasPaymentMethod ? (
+                        <Button
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-foreground"
+                          data-testid="button-manage-billing"
+                          onClick={handleManageSubscription}
+                        >
+                          Manage Billing
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          data-testid="button-add-payment-method"
+                          onClick={() => setLocation('/pricing')}
+                        >
+                          {isTrial ? 'Choose a Plan' : 'Add Payment Method'}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         )}
