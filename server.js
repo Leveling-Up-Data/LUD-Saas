@@ -141,7 +141,11 @@ app.post('/api/invite', async (req, res) => {
 
 // Serve static built frontend
 const publicDir = path.join(__dirname, 'dist', 'public');
-app.use(express.static(publicDir));
+app.use(express.static(publicDir, {
+    // Cache assets (they have content hashes in filenames)
+    maxAge: '1y',
+    etag: true,
+}));
 
 // SPA fallback (non-API requests)
 app.get('*', (req, res) => {
@@ -150,6 +154,10 @@ app.get('*', (req, res) => {
     }
     const indexPath = path.join(publicDir, 'index.html');
     if (fs.existsSync(indexPath)) {
+        // Prevent caching of HTML file to ensure users get latest version
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
         return res.sendFile(indexPath);
     }
     res.status(200).send('<!doctype html><title>LUD-SaaS</title><h1>Build not found</h1>');

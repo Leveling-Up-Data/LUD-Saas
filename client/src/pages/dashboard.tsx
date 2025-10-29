@@ -16,7 +16,6 @@ import { Footer } from "@/components/footer";
 import { pb } from "@/lib/pocketbase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { getApiTokenById } from "@/config/api-tokens";
 import {
   Users,
   Database,
@@ -39,15 +38,7 @@ import {
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
-  const [apiDialog, setApiDialog] = useState<{
-    open: boolean;
-    token: string;
-    tokenName: string;
-  }>({
-    open: false,
-    token: "",
-    tokenName: "",
-  });
+  const [apiDialogOpen, setApiDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: userData, isLoading } = useQuery({
@@ -366,23 +357,7 @@ export default function Dashboard() {
       href: "#",
       onClick: (e: React.MouseEvent) => {
         e.preventDefault();
-        // Get the test API token from configuration
-        const apiToken = getApiTokenById("test-api-token");
-
-        if (apiToken) {
-          setApiDialog({
-            open: true,
-            token: apiToken.token,
-            tokenName: apiToken.name,
-          });
-        } else {
-          // Fallback if no token is configured
-          setApiDialog({
-            open: true,
-            token: "sk-test-1234-56789-abcdefghijklmnop",
-            tokenName: "Test API Token",
-          });
-        }
+        setApiDialogOpen(true);
       },
     },
     {
@@ -874,10 +849,8 @@ export default function Dashboard() {
 
       {/* API Token Dialog */}
       <ApiTokenDialog
-        open={apiDialog.open}
-        onOpenChange={(open) => setApiDialog({ ...apiDialog, open })}
-        token={apiDialog.token}
-        tokenName={apiDialog.tokenName}
+        open={apiDialogOpen}
+        onOpenChange={setApiDialogOpen}
       />
     </div>
   );
