@@ -9,6 +9,8 @@ import { pb } from "@/lib/pocketbase";
 import { Loader2 } from "lucide-react";
 import type { Product } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Pricing() {
   const [, setLocation] = useLocation();
@@ -17,6 +19,8 @@ export default function Pricing() {
     mode: 'signup'
   });
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const { toast } = useToast();
 
@@ -160,18 +164,10 @@ export default function Pricing() {
       setLocation('/contact');
       return;
     }
-
-    // Ensure we have a Stripe Price ID; if missing, guide the user
-    if (product.stripePriceId && String(product.stripePriceId).trim().length > 0) {
-      setLocation(`/checkout?product=${product.id}&price=${product.stripePriceId}`);
-    } else {
-      toast({
-        title: 'Plan not available for checkout',
-        description: 'Please contact us or choose a different plan.',
-        variant: 'destructive',
-      });
-      setLocation('/contact');
-    }
+    // Show confirmation of features and terms before redirecting to payment
+    setSelectedProduct(product);
+    setTermsAccepted(false);
+    setConfirmOpen(true);
   };
 
   const handleAuthSuccess = () => {
@@ -181,9 +177,11 @@ export default function Pricing() {
       } else if (selectedProduct.name === 'Enterprise') {
         setLocation('/contact');
       } else {
-        setLocation(`/checkout?product=${selectedProduct.id}&price=${selectedProduct.stripePriceId}`);
+        // After auth, proceed to confirmation modal instead of immediate redirect
+        setTermsAccepted(false);
+        setConfirmOpen(true);
       }
-      setSelectedProduct(null);
+      // Keep selectedProduct so we can show details and proceed to checkout
     }
   };
 
@@ -341,6 +339,60 @@ export default function Pricing() {
         onModeChange={(mode) => setAuthModal({ open: true, mode })}
         onSuccess={handleAuthSuccess}
       />
+
+      {/* Plan Confirmation Modal */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-foreground">
+              {selectedProduct ? `${selectedProduct.name} plan` : 'Plan details'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {(() => {
+              const features = Array.isArray(selectedProduct?.features)
+                ? (selectedProduct!.features as any[]).map(String)
+                : [] as string[];
+              return features.length > 0 ? (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Included features:</p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-foreground">
+                    {features.map((f: string, i: number) => (
+                      <li key={i}>{f}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null;
+            })()}
+            <label className="flex items-start gap-3 text-sm">
+              <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(v) => setTermsAccepted(Boolean(v))} />
+              <span className="text-muted-foreground">
+                I have read and agree to the{' '}
+                <Link to="/terms-and-conditions">
+                  <span className="text-primary hover:underline">Terms and Conditions</span>
+                </Link>.
+              </span>
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+            <Button
+              disabled={!termsAccepted || !selectedProduct}
+              onClick={() => {
+                if (!selectedProduct) { setConfirmOpen(false); return; }
+                const effectivePrice = selectedProduct.stripePriceId && String(selectedProduct.stripePriceId).trim().length > 0
+                  ? selectedProduct.stripePriceId
+                  : 'price_demo';
+                const qp = `?product=${selectedProduct.id}&price=${effectivePrice}`;
+                setConfirmOpen(false);
+                setLocation(`/checkout${qp}`);
+              }}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
