@@ -207,7 +207,7 @@ export default function Pricing() {
               Simple, transparent pricing
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Choose the perfect plan for your business. All plans include a 14-day free trial.
+              Choose the perfect plan for your business. Use our free trial to get started.
             </p>
           </div>
 
