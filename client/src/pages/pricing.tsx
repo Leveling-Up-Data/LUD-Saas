@@ -211,7 +211,7 @@ export default function Pricing() {
             </p>
           </div>
 
-          {products && (
+          {products && products.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10 mb-20 items-stretch">
               {products
                 .filter((p) => String(p.name).toLowerCase() !== 'enterprise')
@@ -225,6 +225,9 @@ export default function Pricing() {
                   </div>
                 ))}
             </div>
+          )}
+          {products && products.length === 0 && (
+            <div className="mb-20 text-center text-muted-foreground">No plans available right now. Please check back later.</div>
           )}
 
           {/* Feature Comparison Table */}

@@ -18,6 +18,63 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
+// Pricing products (static fallback for production)
+app.get('/api/products', (req, res) => {
+    const products = [
+        {
+            id: '1',
+            name: 'Starter',
+            price: 1900,
+            features: [
+                'Up to 1,000 users',
+                '5GB storage',
+                'Email support',
+                'Basic analytics',
+                'API access',
+            ],
+            maxUsers: 1000,
+            storage: '5GB',
+            priority: 1,
+        },
+        {
+            id: '2',
+            name: 'Professional',
+            price: 4900,
+            features: [
+                'Up to 10,000 users',
+                '50GB storage',
+                'Priority support',
+                'Advanced analytics',
+                'Unlimited API access',
+                'Custom domains',
+                'Team collaboration',
+            ],
+            maxUsers: 10000,
+            storage: '50GB',
+            priority: 2,
+        },
+        {
+            id: '3',
+            name: 'Enterprise',
+            price: 19900,
+            features: [
+                'Unlimited users',
+                '500GB storage',
+                '24/7 phone support',
+                'Custom analytics',
+                'Dedicated API',
+                'White-label options',
+                'Advanced security',
+                'SLA guarantee',
+            ],
+            maxUsers: -1,
+            storage: '500GB',
+            priority: 3,
+        },
+    ];
+    res.json(products);
+});
+
 // Invite endpoint
 app.post('/api/invite', async (req, res) => {
     try {
