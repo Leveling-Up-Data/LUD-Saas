@@ -26,6 +26,7 @@ interface SelectedPlan {
   price: number; // cents
   stripePriceId: string;
   features?: string[];
+  paymentLink?: string;
 }
 
 interface CheckoutFormProps {
@@ -45,6 +46,10 @@ function CheckoutForm({ clientSecret, selectedPlan }: CheckoutFormProps) {
     postal_code: ''
   });
 
+  // Get selectedProduct from URL to pass through payment success
+  const urlParams = new URLSearchParams(window.location.search);
+  const selectedProductId = urlParams.get('selectedProduct');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -60,10 +65,19 @@ function CheckoutForm({ clientSecret, selectedPlan }: CheckoutFormProps) {
     setIsProcessing(true);
 
     try {
+      // Store selectedProductId in sessionStorage if available
+      if (selectedProductId) {
+        sessionStorage.setItem('pendingProductId', selectedProductId);
+      }
+
+      // Include selectedProduct in return URL if available
+      const productParam = selectedProductId ? `&product=${encodeURIComponent(selectedProductId)}` : '';
+      const returnUrl = `${window.location.origin}/dashboard?payment=success&plan=${encodeURIComponent(selectedPlan.name)}${productParam}`;
+
       const { error } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/dashboard?payment=success`,
+          return_url: returnUrl,
           payment_method_data: {
             billing_details: billingDetails
           }
@@ -82,7 +96,7 @@ function CheckoutForm({ clientSecret, selectedPlan }: CheckoutFormProps) {
           title: "Payment Successful!",
           description: "Your subscription has been activated. Welcome to SaaSFlow!",
         });
-        setLocation('/dashboard?payment=success');
+        setLocation(`/dashboard?payment=success&plan=${encodeURIComponent(selectedPlan.name)}${productParam}`);
       }
     } catch (error: any) {
       toast({
@@ -229,7 +243,12 @@ export default function Checkout() {
           let product: any = null;
           if (productId) {
             try {
-              product = await pb.collection('products').getOne(productId);
+              // Try products collection
+              try {
+                product = await pb.collection('products').getOne(productId);
+              } catch (_) {
+                // Product not found in PocketBase
+              }
             } catch (_) {
               // ignore
             }
@@ -258,20 +277,123 @@ export default function Checkout() {
       return;
     }
 
-    // Normal flow: create subscription through PocketBase
+    // Normal flow: check for payment link first, then fall back to embedded form
     (async () => {
       try {
         setLoading(true);
+
+        // Payment links mapping
+        const paymentLinksMap: Record<string, string> = {
+          'Pro': 'https://buy.stripe.com/test_4gM00c64Jb6zfnR18qco001',
+          'Professional': 'https://buy.stripe.com/test_4gM00c64Jb6zfnR18qco001',
+          'Starter': 'https://buy.stripe.com/test_4gM5kwbp37Un5NhbN4co000',
+        };
+
+        // Try to fetch products from API to get payment links
+        let product: any = null;
+        let paymentLink: string | undefined = undefined;
+
+        // FIRST: Try API endpoint (has the latest products with payment links)
+        try {
+          const res = await fetch('/api/products');
+          if (res.ok) {
+            const apiProducts = await res.json();
+            if (Array.isArray(apiProducts)) {
+              // Try to match by stripePriceId first
+              product = apiProducts.find((p: any) => p.stripePriceId === stripePriceId);
+
+              // If not found by price ID, try to match by product ID from URL
+              if (!product && productId) {
+                product = apiProducts.find((p: any) =>
+                  String(p.id) === String(productId) ||
+                  String(p.id) === String(productId).split('_')[0] ||
+                  String(p.id).includes(String(productId)) ||
+                  String(productId).includes(String(p.id))
+                );
+              }
+
+              // Get payment link from product or map by name
+              if (product) {
+                paymentLink = product.paymentLink || paymentLinksMap[product.name];
+              }
+
+              // If still no match, check all products for Starter/Pro names
+              if (!paymentLink && apiProducts.length > 0) {
+                for (const p of apiProducts) {
+                  const name = String(p.name || '').trim();
+                  if (name === 'Starter' || name === 'Pro' || name === 'Professional') {
+                    const link = p.paymentLink || paymentLinksMap[name];
+                    if (link) {
+                      product = p;
+                      paymentLink = link;
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } catch (_) {
+          // Ignore API errors, try PocketBase next
+        }
+
+        // Fallback: Try PocketBase if API didn't work
+        if (!paymentLink) {
+          try {
+            const pbProducts = await pb.collection('products').getFullList();
+            product = pbProducts.find((p: any) => p.stripePriceId === stripePriceId || String(p.id) === String(productId));
+            if (product && !paymentLink) {
+              paymentLink = product.paymentLink || paymentLinksMap[product.name];
+            }
+          } catch (_) {
+            // Ignore PocketBase errors
+          }
+        }
+
+        // If we have a payment link, redirect to Stripe hosted checkout
+        if (paymentLink) {
+          // Redirect to Stripe payment link
+          window.location.href = paymentLink;
+          return;
+        }
+
+        // Try to determine plan from URL params or product name (case insensitive)
+        const planName = urlParams.get('plan') || product?.name;
+        if (planName) {
+          const normalizedName = String(planName).toLowerCase().trim();
+          if (normalizedName === 'starter' && paymentLinksMap['Starter']) {
+            window.location.href = paymentLinksMap['Starter'];
+            return;
+          }
+          if ((normalizedName === 'pro' || normalizedName === 'professional') && paymentLinksMap['Pro']) {
+            window.location.href = paymentLinksMap['Pro'];
+            return;
+          }
+          // Also try exact match
+          if (paymentLinksMap[planName]) {
+            window.location.href = paymentLinksMap[planName];
+            return;
+          }
+        }
+
+        // Fall back to embedded payment form if no payment link
         const data = await pb.send('/api/create-subscription', {
           method: 'POST',
           body: { userId: pb.authStore.model?.id, stripePriceId }
         });
         if (data.clientSecret) {
           setClientSecret(data.clientSecret);
-          const products = await pb.collection('products').getFullList();
-          const product = products.find((p: any) => p.stripePriceId === stripePriceId);
           if (product) {
-            setSelectedPlan({ name: product.name, price: product.price, stripePriceId: product.stripePriceId, features: Array.isArray(product.features) ? product.features : [] });
+            setSelectedPlan({
+              name: product.name,
+              price: product.price,
+              stripePriceId: product.stripePriceId,
+              features: Array.isArray(product.features) ? product.features : [],
+              paymentLink: product.paymentLink
+            });
+          } else {
+            // Fallback if product not found - use the stripePriceId from URL
+            setSelectedPlan({ name: 'Selected Plan', price: 0, stripePriceId: stripePriceId, features: [] });
           }
         } else {
           throw new Error('Failed to create subscription');
@@ -406,7 +528,16 @@ export default function Checkout() {
 
                     <Button
                       className="w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90"
-                      onClick={() => setLocation('/dashboard?payment=success')}
+                      onClick={() => {
+                        // Store selectedProductId in sessionStorage if available
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const selectedProductId = urlParams.get('selectedProduct');
+                        if (selectedProductId) {
+                          sessionStorage.setItem('pendingProductId', selectedProductId);
+                        }
+                        const productParam = selectedProductId ? `&product=${encodeURIComponent(selectedProductId)}` : '';
+                        setLocation(`/dashboard?payment=success${productParam}`);
+                      }}
                       data-testid="button-demo-confirm"
                     >
                       Confirm and Continue

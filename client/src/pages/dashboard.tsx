@@ -33,6 +33,7 @@ import {
   Key,
   LifeBuoy,
   ArrowRight,
+  RefreshCw,
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -41,9 +42,11 @@ export default function Dashboard() {
   const [apiDialogOpen, setApiDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: userData, isLoading } = useQuery({
+  const { data: userData, isLoading, refetch } = useQuery({
     queryKey: ["user", authUser?.id],
     enabled: isAuthenticated && !authLoading && !!authUser?.id,
+    refetchOnWindowFocus: true, // Refetch when user returns to the tab
+    refetchInterval: 30000, // Refetch every 30 seconds to keep data fresh
     queryFn: async () => {
       try {
         if (!authUser?.id) return null;
@@ -79,33 +82,24 @@ export default function Dashboard() {
             if (trial) {
               trialUsage = {
                 id: trial.id,
-                request_count: Number(
-                  (trial as any).request_count ?? (trial as any).total_request_count ?? 0
-                ),
-                request_total_limit: Number(
-                  (trial as any).request_total_limit ?? (trial as any).total_request_limit ?? 50
-                ),
+                name: (trial as any).name || 'Free Trial',
+                request_count: Number((trial as any).total_request_count ?? 0),
+                request_total_limit: Number((trial as any).total_request_limit ?? 50),
                 trial_start_date: trial.trial_start_date,
                 trial_end_date: trial.trial_end_date,
               };
               const now = Date.now();
               const end = trial.trial_end_date ? new Date(trial.trial_end_date).getTime() : 0;
               const inWindow = end > now;
-              const used = Number(
-                (trial as any).request_count ?? (trial as any).total_request_count ?? 0
-              );
-              const limit = Number(
-                (trial as any).request_total_limit ?? (trial as any).total_request_limit ?? 50
-              );
+              const used = Number((trial as any).total_request_count ?? 0);
+              const limit = Number((trial as any).total_request_limit ?? 50);
               const withinQuota = used < limit;
               // Self-heal incorrect limit values in PocketBase (set to 50 if 0 or missing)
               if (!limit || Number(limit) === 0) {
                 try {
                   await pb.collection('trial_usage').update(trial.id, {
-                    request_total_limit: 50,
                     total_request_limit: 50,
                   });
-                  (trial as any).request_total_limit = 50;
                   (trial as any).total_request_limit = 50;
                   trialUsage.request_total_limit = 50;
                 } catch (_) {
@@ -113,12 +107,21 @@ export default function Dashboard() {
                 }
               }
               if (inWindow && withinQuota) {
+                const planName = (trial as any).name || 'Free Trial';
+                // Calculate amount based on plan name
+                let amount = 0; // Free Trial default
+                if (planName === 'Starter') {
+                  amount = 1900; // $19.00 in cents
+                } else if (planName === 'Pro' || planName === 'Professional') {
+                  amount = 4900; // $49.00 in cents
+                }
+
                 subscription = {
                   id: trial.id,
-                  plan: 'Free Trial',
+                  plan: planName,
                   status: 'trialing',
                   currentPeriodEnd: trial.trial_end_date,
-                  amount: 0,
+                  amount: amount,
                   trialEnd: trial.trial_end_date,
                 };
               }
@@ -185,15 +188,135 @@ export default function Dashboard() {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) setLocation("/");
 
-    // Check for payment success
+    // Check for payment success and create/update trial_usage record
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("payment") === "success") {
-      toast({
-        title: "Welcome aboard! 🎉",
-        description: "Your subscription has been activated successfully.",
-      });
+      const planName = urlParams.get("plan") || "Starter"; // Default to Starter if not specified
+
+      // Get product ID from URL or sessionStorage (for Stripe payment links)
+      const productId = urlParams.get("product") || sessionStorage.getItem('pendingProductId');
+
+      // Create or update trial_usage record with plan name
+      (async () => {
+        try {
+          const userId = pb.authStore.model?.id;
+          if (!userId) return;
+
+          // Check if trial_usage record already exists
+          const existingTrials = await pb.collection('trial_usage').getList(1, 1, {
+            filter: `user_id = "${userId}"`,
+            sort: '-created',
+          });
+
+          const now = new Date();
+          // For paid plans, set end date to 1 month from now (or calculate based on plan)
+          const planEndDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days default
+
+          if (existingTrials.items.length > 0) {
+            // Update existing record with plan name
+            await pb.collection('trial_usage').update(existingTrials.items[0].id, {
+              name: planName,
+              trial_start_date: now.toISOString(),
+              trial_end_date: planEndDate.toISOString(),
+            });
+          } else {
+            // Create new trial_usage record with plan info
+            await pb.collection('trial_usage').create({
+              user_id: userId,
+              name: planName,
+              total_request_count: 0,
+              total_request_limit: planName === "Pro" ? 10000 : 1000, // Higher limit for Pro
+              trial_start_date: now.toISOString(),
+              trial_end_date: planEndDate.toISOString(),
+            });
+          }
+
+          toast({
+            title: "Welcome aboard! 🎉",
+            description: `Your ${planName} plan has been activated successfully.`,
+          });
+        } catch (error: any) {
+          console.error('Error creating trial_usage record:', error);
+          toast({
+            title: "Payment Successful",
+            description: "Your subscription has been activated successfully.",
+          });
+        }
+      })();
+
       // Clean up URL
       window.history.replaceState({}, "", "/dashboard");
+
+      // Redirect to Slack OAuth if product is starfish-slack
+      // Check if user has active plan before redirecting
+      if (productId === "starfish-slack") {
+        // Clear the pending product from sessionStorage
+        sessionStorage.removeItem('pendingProductId');
+
+        // Wait a moment for the trial_usage record to be created, then check if user has active plan
+        setTimeout(async () => {
+          try {
+            const userId = pb.authStore.model?.id;
+            if (!userId) return;
+
+            // Check if user has active subscription or trial
+            let hasActivePlan = false;
+
+            // Check for subscription
+            try {
+              const subscriptions = await pb.collection("subscriptions").getList(1, 1, {
+                filter: `userId = "${userId}"`,
+                sort: "-created",
+              });
+              if (subscriptions.items.length > 0) {
+                const sub = subscriptions.items[0];
+                const status = sub.status;
+                if (status === "active" || status === "trialing") {
+                  hasActivePlan = true;
+                }
+              }
+            } catch (_) {
+              // No subscription found, check trial_usage
+            }
+
+            // Check for trial_usage if no subscription
+            if (!hasActivePlan) {
+              try {
+                const trials = await pb.collection('trial_usage').getList(1, 1, {
+                  filter: `user_id = "${userId}"`,
+                  sort: '-created',
+                });
+                if (trials.items.length > 0) {
+                  const trial = trials.items[0];
+                  const endDate = trial.trial_end_date ? new Date(trial.trial_end_date).getTime() : 0;
+                  const now = Date.now();
+                  if (endDate > now) {
+                    hasActivePlan = true;
+                  }
+                }
+              } catch (_) {
+                // No trial found
+              }
+            }
+
+            // Only redirect if user has active plan
+            if (hasActivePlan) {
+              window.location.href = "https://leveling-up-data-dev.slack.com/oauth?client_id=8395289183441.9315965017559&scope=app_mentions%3Aread%2Cchannels%3Ajoin%2Cchannels%3Aread%2Cchat%3Awrite%2Ccommands%2Cfiles%3Aread%2Cfiles%3Awrite%2Cgroups%3Aread%2Cim%3Ahistory%2Cremote_files%3Aread%2Cmpim%3Ahistory%2Cchannels%3Ahistory%2Cgroups%3Ahistory&user_scope=&redirect_uri=&state=&granular_bot_scope=1&single_channel=0&install_redirect=&tracked=1&user_default=0&team=";
+            } else {
+              // User doesn't have active plan, show message
+              toast({
+                title: "Plan Required",
+                description: "Please choose a plan to proceed with Starfish Slack setup.",
+              });
+            }
+          } catch (error: any) {
+            console.error('Error checking active plan:', error);
+          }
+        }, 1000); // Wait 1 second for database operations to complete
+      } else if (productId) {
+        // Clear the pending product from sessionStorage for other products
+        sessionStorage.removeItem('pendingProductId');
+      }
     }
   }, [authLoading, isAuthenticated, setLocation, toast]);
 
@@ -225,6 +348,7 @@ export default function Dashboard() {
   const trialUsage = (userData as any)?.trialUsage as
     | {
       id: string;
+      name?: string;
       request_count: number;
       request_total_limit: number;
       trial_start_date?: string;
@@ -403,7 +527,8 @@ export default function Dashboard() {
       }
 
       // Find the matching product to get its Stripe Price ID
-      const products = await pb.collection('products').getFullList({ sort: 'priority' });
+      const products = await pb.collection('products').getFullList();
+
       const product = products.find((p: any) =>
         String(p.name).toLowerCase() === String(subscription.plan).toLowerCase()
       );
@@ -446,6 +571,17 @@ export default function Dashboard() {
                 </span>
               </p>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isLoading}
+              className="flex items-center space-x-2"
+              data-testid="button-refresh-data"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -465,7 +601,11 @@ export default function Dashboard() {
                     className="bg-primary/10 text-primary"
                     data-testid="badge-subscription-status"
                   >
-                    {!subscription ? "None" : subscription?.status === "trialing" ? "Free Trial" : subscription?.status || "Active"}
+                    {!subscription
+                      ? (trialUsage?.name || "None")
+                      : subscription?.status === "trialing"
+                        ? (subscription?.plan || "Free Trial")
+                        : subscription?.status || "Active"}
                   </Badge>
                 </div>
 
@@ -476,7 +616,7 @@ export default function Dashboard() {
                       className="text-lg font-semibold text-foreground capitalize"
                       data-testid="text-subscription-plan"
                     >
-                      {subscription?.plan || "No active plan"}
+                      {subscription?.plan || trialUsage?.name || "No active plan"}
                     </p>
                   </div>
                   <div>
@@ -487,7 +627,19 @@ export default function Dashboard() {
                       className="text-lg font-semibold text-foreground"
                       data-testid="text-subscription-amount"
                     >
-                      {subscription ? `$${(subscription.amount / 100).toFixed(2)}` : "$0.00"}
+                      {(() => {
+                        if (subscription) {
+                          return `$${(subscription.amount / 100).toFixed(2)}`;
+                        }
+                        // Calculate based on trialUsage plan name
+                        const planName = trialUsage?.name;
+                        if (planName === 'Starter') {
+                          return '$19.00';
+                        } else if (planName === 'Pro' || planName === 'Professional') {
+                          return '$49.00';
+                        }
+                        return '$0.00';
+                      })()}
                     </p>
                   </div>
                 </div>
@@ -499,7 +651,7 @@ export default function Dashboard() {
                       <div className="space-y-2">
                         <Progress
                           value={Math.min(100, Math.max(0, (trialUsage.request_count / Math.max(1, trialUsage.request_total_limit)) * 100))}
-                          className="h-2"
+                          className="h-2 bg-gray-200 [&>div]:bg-blue-500"
                         />
                         <p className="text-sm text-foreground" data-testid="text-trial-requests">
                           {trialUsage.request_count} / {trialUsage.request_total_limit}
@@ -564,10 +716,12 @@ export default function Dashboard() {
                     <Gift className="h-5 w-5 text-accent" />
                     <div>
                       <p className="font-medium text-foreground">
-                        Free Trial Active
+                        {subscription?.plan === 'Free Trial' ? 'Free Trial Active' : `${subscription?.plan || 'Trial'} Active`}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {trialDaysRemaining} days remaining until first charge
+                        {subscription?.plan === 'Free Trial'
+                          ? `${trialDaysRemaining} days remaining until first charge`
+                          : `${trialDaysRemaining} days remaining until renewal`}
                       </p>
                     </div>
                   </div>
@@ -582,8 +736,64 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Progress value={trialProgress} className="h-2" />
+                  <Progress value={trialProgress} className="h-2 bg-gray-200 [&>div]:bg-blue-500" />
                 </div>
+              </div>
+            )}
+            {/* Trial Status for trial_usage without subscription */}
+            {!subscription && trialUsage && (
+              <div className="mt-6 p-4 bg-accent/10 border border-accent/20 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Gift className="h-5 w-5 text-accent" />
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {trialUsage.name === 'Free Trial' ? 'Free Trial Active' : `${trialUsage.name || 'Plan'} Active`}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {(() => {
+                          if (!trialUsage.trial_end_date) return 'Active';
+                          const endDate = new Date(trialUsage.trial_end_date);
+                          const now = new Date();
+                          const daysLeft = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+                          return trialUsage.name === 'Free Trial'
+                            ? `${daysLeft} days remaining until first charge`
+                            : `${daysLeft} days remaining until renewal`;
+                        })()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className="text-2xl font-bold text-foreground"
+                      data-testid="text-trial-days-usage"
+                    >
+                      {(() => {
+                        if (!trialUsage.trial_end_date) return '—';
+                        const endDate = new Date(trialUsage.trial_end_date);
+                        const now = new Date();
+                        return Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+                      })()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">days left</p>
+                  </div>
+                </div>
+                {trialUsage.trial_end_date && (
+                  <div className="mt-3">
+                    <Progress
+                      value={(() => {
+                        if (!trialUsage.trial_start_date || !trialUsage.trial_end_date) return 0;
+                        const start = new Date(trialUsage.trial_start_date).getTime();
+                        const end = new Date(trialUsage.trial_end_date).getTime();
+                        const now = Date.now();
+                        const total = end - start;
+                        const elapsed = now - start;
+                        return Math.min(100, Math.max(0, (elapsed / total) * 100));
+                      })()}
+                      className="h-2 bg-gray-200 [&>div]:bg-blue-500"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
