@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Paperclip } from 'lucide-react';
 import { pb } from '@/lib/pocketbase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -158,27 +158,27 @@ export function Chatbot() {
       <button
         id="chatbot-button"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 right-6 w-14 h-14 bg-gradient-to-r from-primary to-secondary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-50 hover:scale-110"
+        className="fixed bottom-20 right-4 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-r from-primary to-secondary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-50 hover:scale-110"
         data-testid="button-chatbot-open"
         title="Open chatbot"
         style={{ display: isOpen ? 'none' : 'flex' }}
       >
-        <MessageCircle size={24} />
+        <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6" />
       </button>
 
       {/* Chat Window */}
       {isOpen && (
         <div
           id="chatbot-window"
-          className="fixed bottom-20 right-6 w-96 h-[500px] bg-card border border-border rounded-lg shadow-2xl z-50 flex flex-col"
+          className="fixed inset-0 sm:inset-auto sm:bottom-20 sm:right-6 sm:w-96 sm:h-[500px] sm:rounded-lg sm:shadow-2xl bg-card border border-border z-50 flex flex-col"
           data-testid="chatbot-window"
         >
           {/* Header */}
           <div
             id="chatbot-header"
-            className="bg-gradient-to-r from-primary to-secondary text-white px-4 py-3 rounded-t-lg flex justify-between items-center"
+            className="bg-gradient-to-r from-primary to-secondary text-white px-4 py-3 sm:rounded-t-lg flex justify-between items-center"
           >
-            <span className="font-semibold">Have a question? Ask us!</span>
+            <span className="font-semibold text-sm sm:text-base">Have a question? Ask us!</span>
             <button
               id="chatbot-close"
               onClick={() => setIsOpen(false)}
@@ -193,7 +193,7 @@ export function Chatbot() {
           {/* Messages */}
           <div
             id="chatbot-messages"
-            className="flex-1 overflow-y-auto p-4 space-y-3 bg-background"
+            className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 bg-background"
           >
             {messages.map((msg, idx) => (
               <div
@@ -201,7 +201,7 @@ export function Chatbot() {
                 className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {msg.fileUrl ? (
-                  <div className="bg-muted px-4 py-2 rounded-lg max-w-[80%]">
+                  <div className="bg-muted px-3 py-2 sm:px-4 rounded-lg max-w-[85%] sm:max-w-[80%] text-sm sm:text-base">
                     <a
                       href={msg.fileUrl}
                       target="_blank"
@@ -214,7 +214,7 @@ export function Chatbot() {
                   </div>
                 ) : (
                   <div
-                    className={`px-4 py-2 rounded-lg max-w-[80%] ${msg.sender === 'user'
+                    className={`px-3 py-2 sm:px-4 rounded-lg max-w-[85%] sm:max-w-[80%] text-sm sm:text-base ${msg.sender === 'user'
                       ? 'bg-gradient-to-r from-primary to-secondary text-white'
                       : 'bg-muted text-foreground'
                       }`}
@@ -226,7 +226,7 @@ export function Chatbot() {
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-muted text-foreground px-3 py-2 rounded-lg inline-flex items-center gap-2">
+                <div className="bg-muted text-foreground px-3 py-2 rounded-lg inline-flex items-center gap-2 text-sm sm:text-base">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span>Thinking…</span>
                 </div>
@@ -235,60 +235,68 @@ export function Chatbot() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* File Row */}
-          <div id="chatbot-file-row" className="px-4 py-2 border-t border-border bg-card">
-            <div className="flex flex-col gap-1">
+          {/* Input Area */}
+          <div className="border-t border-border bg-card sm:rounded-b-lg">
+            {/* File Attachment Area */}
+            <div className="px-3 sm:px-4 pt-2 pb-1">
+              <label
+                htmlFor="chatbot-file"
+                className={`inline-flex items-center gap-2 text-xs sm:text-sm text-muted-foreground cursor-pointer ${isLoading || !isAuthenticated ? 'opacity-60 cursor-not-allowed' : 'hover:text-foreground'}`}
+              >
+                <Paperclip className="w-4 h-4" />
+                <span>Attach file</span>
+              </label>
               <input
                 type="file"
                 id="chatbot-file"
                 ref={fileInputRef}
-                accept=".pdf,.doc,.docx,.txt"
+                accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.csv"
                 onChange={handleFileChange}
                 disabled={isLoading || !isAuthenticated}
-                className={`text-sm text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary/90 cursor-pointer ${isLoading || !isAuthenticated ? 'opacity-60 cursor-not-allowed' : ''}`}
+                className="hidden"
                 data-testid="input-chatbot-file"
-                title="Upload file"
                 aria-label="Upload file for chatbot"
               />
-              {!isAuthenticated && (
-                <div className="text-xs text-muted-foreground">
-                  Sign in to upload files
-                </div>
-              )}
               {selectedFile && (
                 <div
                   id="chatbot-filename"
-                  className="text-xs text-muted-foreground mt-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]"
+                  className="text-xs text-muted-foreground mt-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-full sm:max-w-[200px]"
                   data-testid="text-filename"
                 >
                   {selectedFile.name}
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Input */}
-          <div id="chatbot-input" className="px-4 py-3 border-t border-border bg-card rounded-b-lg flex gap-2">
-            <input
-              type="text"
-              id="chatbot-text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type a message..."
-              disabled={isLoading}
-              className={`flex-1 px-3 py-2 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${isLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
-              data-testid="input-chatbot-text"
-            />
-            <button
-              id="chatbot-send"
-              onClick={sendMessage}
-              disabled={isLoading}
-              className={`bg-gradient-to-r from-primary to-secondary text-white px-4 py-2 rounded-lg transition ${isLoading ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'}`}
-              data-testid="button-chatbot-send"
-            >
-              {isLoading ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <Send size={18} />}
-            </button>
+            {/* Input Row */}
+            <div id="chatbot-input" className="px-3 sm:px-4 pb-2 flex gap-2 items-center">
+              <input
+                type="text"
+                id="chatbot-text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type a message..."
+                disabled={isLoading}
+                className={`flex-1 px-3 py-2 text-sm sm:text-base bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${isLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                data-testid="input-chatbot-text"
+              />
+              <button
+                id="chatbot-send"
+                onClick={sendMessage}
+                disabled={isLoading}
+                className={`bg-gradient-to-r from-primary to-secondary text-white p-2.5 sm:p-3 rounded-lg transition flex-shrink-0 ${isLoading ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'}`}
+                data-testid="button-chatbot-send"
+                title="Send message"
+              >
+                {isLoading ? <Loader2 className="h-4 w-4 sm:h-[18px] sm:w-[18px] animate-spin" /> : <Send size={18} className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />}
+              </button>
+            </div>
+
+            {/* Powered by Starfish */}
+            <div className="px-3 sm:px-4 pb-2">
+              <p className="text-xs text-muted-foreground text-center">powered by Starfish</p>
+            </div>
           </div>
         </div>
       )}
