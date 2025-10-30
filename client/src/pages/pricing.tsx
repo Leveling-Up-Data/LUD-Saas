@@ -63,22 +63,26 @@ export default function Pricing() {
         // Fall back to server products below
       }
 
-      // Fallback: fetch server-provided products for display if PocketBase unavailable/empty
+      // Try fetching directly from Stripe (server proxied) if PocketBase unavailable/empty
       try {
-        const res = await fetch('/api/products');
-        if (!res.ok) throw new Error('Failed to load fallback products');
-        const data = await res.json();
-        const mapped = (Array.isArray(data) ? data : []).map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          price: p.price,
-          // Fallback set empty price id; selection handler will handle gracefully
-          stripePriceId: p.stripePriceId || '',
-          features: p.features || [],
-          maxUsers: p.maxUsers,
-          storage: p.storage,
-          priority: p.priority,
-        })) as Product[];
+        const res = await fetch('/api/stripe/products');
+        if (!res.ok) throw new Error('Failed to load Stripe products');
+        const stripeProducts = await res.json();
+        const mapped = (Array.isArray(stripeProducts) ? stripeProducts : []).map((p: any) => {
+          const monthly = Array.isArray(p.prices)
+            ? p.prices.find((pr: any) => pr?.recurring?.interval === 'month') || p.prices[0]
+            : null;
+          return {
+            id: p.id,
+            name: p.name,
+            price: monthly?.unitAmount ?? 0,
+            stripePriceId: monthly?.id ?? '',
+            features: [],
+            maxUsers: undefined as any,
+            storage: undefined as any,
+            priority: 99,
+          } as Product;
+        });
 
         const hasFreeTrial = mapped.some(p => String(p.name).toLowerCase() === 'free trial');
         const withFreeTrial = hasFreeTrial
@@ -98,7 +102,42 @@ export default function Pricing() {
           ] as Product[]);
         return withFreeTrial;
       } catch (_) {
-        return [] as Product[];
+        // Fallback: fetch server-provided static products for display
+        try {
+          const res2 = await fetch('/api/products');
+          if (!res2.ok) throw new Error('Failed to load fallback products');
+          const data = await res2.json();
+          const mapped = (Array.isArray(data) ? data : []).map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            stripePriceId: p.stripePriceId || '',
+            features: p.features || [],
+            maxUsers: p.maxUsers,
+            storage: p.storage,
+            priority: p.priority,
+          })) as Product[];
+
+          const hasFreeTrial = mapped.some(p => String(p.name).toLowerCase() === 'free trial');
+          const withFreeTrial = hasFreeTrial
+            ? mapped
+            : ([
+              {
+                id: 'free-trial',
+                name: 'Free Trial',
+                price: 0,
+                stripePriceId: '',
+                features: ['2-day free trial', '50 total requests'],
+                maxUsers: 0,
+                storage: '—',
+                priority: -1,
+              },
+              ...mapped,
+            ] as Product[]);
+          return withFreeTrial;
+        } catch (_) {
+          return [] as Product[];
+        }
       }
     }
   });
@@ -380,6 +419,17 @@ export default function Pricing() {
               disabled={!termsAccepted || !selectedProduct}
               onClick={() => {
                 if (!selectedProduct) { setConfirmOpen(false); return; }
+                // Redirect to Stripe Payment Links for Starter and Professional
+                const name = String(selectedProduct.name).toLowerCase();
+                if (name === 'starter') {
+                  window.location.href = 'https://buy.stripe.com/test_4gM5kwbp37Un5NhbN4co000';
+                  return;
+                }
+                if (name === 'professional' || name === 'pro') {
+                  window.location.href = 'https://buy.stripe.com/test_4gM00c64Jb6zfnR18qco001';
+                  return;
+                }
+                // Default: proceed to in-app checkout flow
                 const effectivePrice = selectedProduct.stripePriceId && String(selectedProduct.stripePriceId).trim().length > 0
                   ? selectedProduct.stripePriceId
                   : 'price_demo';
