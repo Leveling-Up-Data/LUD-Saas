@@ -206,7 +206,7 @@ export default function Home() {
               </h3>
               {/* Place your chat image at /public/chat-preview.png */}
               <img
-                src="/chat-preview.png"
+                src={`${import.meta.env.BASE_URL}chat-preview.png`}
                 alt="Starfish answering questions in Slack"
                 className="w-full h-auto max-h-[440px] md:max-h-[500px] object-contain rounded-2xl border border-border shadow-lg"
                 loading="lazy"
