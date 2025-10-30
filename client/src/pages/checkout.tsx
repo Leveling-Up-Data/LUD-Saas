@@ -46,6 +46,10 @@ function CheckoutForm({ clientSecret, selectedPlan }: CheckoutFormProps) {
     postal_code: ''
   });
 
+  // Get selectedProduct from URL to pass through payment success
+  const urlParams = new URLSearchParams(window.location.search);
+  const selectedProductId = urlParams.get('selectedProduct');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -61,10 +65,19 @@ function CheckoutForm({ clientSecret, selectedPlan }: CheckoutFormProps) {
     setIsProcessing(true);
 
     try {
+      // Store selectedProductId in sessionStorage if available
+      if (selectedProductId) {
+        sessionStorage.setItem('pendingProductId', selectedProductId);
+      }
+
+      // Include selectedProduct in return URL if available
+      const productParam = selectedProductId ? `&product=${encodeURIComponent(selectedProductId)}` : '';
+      const returnUrl = `${window.location.origin}/dashboard?payment=success&plan=${encodeURIComponent(selectedPlan.name)}${productParam}`;
+
       const { error } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/dashboard?payment=success`,
+          return_url: returnUrl,
           payment_method_data: {
             billing_details: billingDetails
           }
@@ -83,7 +96,7 @@ function CheckoutForm({ clientSecret, selectedPlan }: CheckoutFormProps) {
           title: "Payment Successful!",
           description: "Your subscription has been activated. Welcome to SaaSFlow!",
         });
-        setLocation('/dashboard?payment=success');
+        setLocation(`/dashboard?payment=success&plan=${encodeURIComponent(selectedPlan.name)}${productParam}`);
       }
     } catch (error: any) {
       toast({
@@ -230,7 +243,12 @@ export default function Checkout() {
           let product: any = null;
           if (productId) {
             try {
-              product = await pb.collection('products').getOne(productId);
+              // Try products collection
+              try {
+                product = await pb.collection('products').getOne(productId);
+              } catch (_) {
+                // Product not found in PocketBase
+              }
             } catch (_) {
               // ignore
             }
@@ -510,7 +528,16 @@ export default function Checkout() {
 
                     <Button
                       className="w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90"
-                      onClick={() => setLocation('/dashboard?payment=success')}
+                      onClick={() => {
+                        // Store selectedProductId in sessionStorage if available
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const selectedProductId = urlParams.get('selectedProduct');
+                        if (selectedProductId) {
+                          sessionStorage.setItem('pendingProductId', selectedProductId);
+                        }
+                        const productParam = selectedProductId ? `&product=${encodeURIComponent(selectedProductId)}` : '';
+                        setLocation(`/dashboard?payment=success${productParam}`);
+                      }}
                       data-testid="button-demo-confirm"
                     >
                       Confirm and Continue

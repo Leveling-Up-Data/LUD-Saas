@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Pricing() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [authModal, setAuthModal] = useState<{ open: boolean; mode: 'signin' | 'signup' }>({
     open: false,
     mode: 'signup'
@@ -21,14 +21,33 @@ export default function Pricing() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
   const { toast } = useToast();
+
+  // Read product parameter from URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('product');
+    if (productId) {
+      setSelectedProductId(productId);
+    }
+  }, [location]);
 
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ['products'],
     queryFn: async () => {
+      let pocketBaseProducts: Product[] = [];
+
       try {
-        const records = await pb.collection('products').getFullList({ sort: 'priority' });
+        // Fetch products from PocketBase products collection
+        let records: any[] = [];
+        try {
+          records = await pb.collection('products').getFullList();
+        } catch (_) {
+          // If PocketBase products not available, will fall back to API products below
+        }
+
         const mapped = records.map(record => ({
           id: record.id,
           name: record.name,
@@ -37,12 +56,11 @@ export default function Pricing() {
           features: record.features || [],
           maxUsers: record.maxUsers,
           storage: record.storage,
-          priority: record.priority
         })) as Product[];
 
         // Always include Free Trial card at the front if not present
         const hasFreeTrial = mapped.some(p => String(p.name).toLowerCase() === 'free trial');
-        const withFreeTrial = hasFreeTrial
+        pocketBaseProducts = hasFreeTrial
           ? mapped
           : ([
             {
@@ -57,13 +75,11 @@ export default function Pricing() {
             },
             ...mapped,
           ] as Product[]);
-
-        if (Array.isArray(withFreeTrial) && withFreeTrial.length > 0) return withFreeTrial;
       } catch (_) {
         // Fall back to server products below
       }
 
-      // Try fetching directly from Stripe (server proxied) if PocketBase unavailable/empty
+      // Always try to fetch from API products endpoint for Starter/Professional
       try {
         const res = await fetch('/api/stripe/products');
         if (!res.ok) throw new Error('Failed to load Stripe products');
@@ -100,14 +116,18 @@ export default function Pricing() {
             },
             ...mapped,
           ] as Product[]);
-        return withFreeTrial;
+        // Don't return - continue to fetch from /api/products and merge
       } catch (_) {
-        // Fallback: fetch server-provided static products for display
-        try {
-          const res2 = await fetch('/api/products');
-          if (!res2.ok) throw new Error('Failed to load fallback products');
-          const data = await res2.json();
-          const mapped = (Array.isArray(data) ? data : []).map((p: any) => ({
+        // Stripe API failed, continue to /api/products
+      }
+
+      // Always fetch from /api/products to get Starter/Professional
+      let apiProducts: Product[] = [];
+      try {
+        const res = await fetch('/api/products');
+        if (res.ok) {
+          const data = await res.json();
+          apiProducts = (Array.isArray(data) ? data : []).map((p: any) => ({
             id: p.id,
             name: p.name,
             price: p.price,
@@ -115,30 +135,64 @@ export default function Pricing() {
             features: p.features || [],
             maxUsers: p.maxUsers,
             storage: p.storage,
-            priority: p.priority,
+            priority: p.priority ?? 99,
           })) as Product[];
+        }
+      } catch (_) {
+        // API not available
+      }
 
-          const hasFreeTrial = mapped.some(p => String(p.name).toLowerCase() === 'free trial');
-          const withFreeTrial = hasFreeTrial
-            ? mapped
-            : ([
-              {
-                id: 'free-trial',
-                name: 'Free Trial',
-                price: 0,
-                stripePriceId: '',
-                features: ['2-day free trial', '50 total requests'],
-                maxUsers: 0,
-                storage: '—',
-                priority: -1,
-              },
-              ...mapped,
-            ] as Product[]);
-          return withFreeTrial;
-        } catch (_) {
-          return [] as Product[];
+      // Merge all products, avoiding duplicates by-pr name
+      let mergedProducts = [...pocketBaseProducts, ...apiProducts];
+      mergedProducts = mergedProducts.filter((p, index, self) =>
+        index === self.findIndex(t => String(t.name).toLowerCase() === String(p.name).toLowerCase())
+      );
+
+      // Ensure Free Trial is first
+      const finalHasFreeTrial = mergedProducts.some(p => String(p.name).toLowerCase() === 'free trial');
+      if (!finalHasFreeTrial) {
+        mergedProducts = [
+          {
+            id: 'free-trial',
+            name: 'Free Trial',
+            price: 0,
+            stripePriceId: '',
+            features: ['2-day free trial', '50 total requests'],
+            maxUsers: 0,
+            storage: '—',
+            priority: -1,
+          },
+          ...mergedProducts,
+        ] as Product[];
+      } else {
+        const freeTrialIndex = mergedProducts.findIndex(p => String(p.name).toLowerCase() === 'free trial');
+        if (freeTrialIndex > 0) {
+          const freeTrial = mergedProducts.splice(freeTrialIndex, 1)[0];
+          mergedProducts = [freeTrial, ...mergedProducts];
         }
       }
+
+      // Sort by priority
+      mergedProducts.sort((a, b) => {
+        if (String(a.name).toLowerCase() === 'free trial') return -1;
+        if (String(b.name).toLowerCase() === 'free trial') return 1;
+        const priorityA = a.priority ?? 99;
+        const priorityB = b.priority ?? 99;
+        return priorityA - priorityB;
+      });
+
+      return mergedProducts.length > 0 ? mergedProducts : [
+        {
+          id: 'free-trial',
+          name: 'Free Trial',
+          price: 0,
+          stripePriceId: '',
+          features: ['2-day free trial', '50 total requests'],
+          maxUsers: 0,
+          storage: '—',
+          priority: -1,
+        },
+      ] as Product[];
     }
   });
 
@@ -171,9 +225,8 @@ export default function Pricing() {
 
       await pb.collection('trial_usage').create({
         user_id: userId,
-        request_count: 0,
+        name: 'Free Trial',
         total_request_count: 0,
-        request_total_limit: 50,
         total_request_limit: 50,
         trial_start_date: now.toISOString(),
         trial_end_date: end.toISOString(),
@@ -420,6 +473,10 @@ export default function Pricing() {
               onClick={() => {
                 if (!selectedProduct) { setConfirmOpen(false); return; }
                 // Redirect to Stripe Payment Links for Starter and Professional
+                // Store selectedProductId in sessionStorage so dashboard can access it after payment
+                if (selectedProductId) {
+                  sessionStorage.setItem('pendingProductId', selectedProductId);
+                }
                 const name = String(selectedProduct.name).toLowerCase();
                 if (name === 'starter') {
                   window.location.href = 'https://buy.stripe.com/test_4gM5kwbp37Un5NhbN4co000';
@@ -433,7 +490,9 @@ export default function Pricing() {
                 const effectivePrice = selectedProduct.stripePriceId && String(selectedProduct.stripePriceId).trim().length > 0
                   ? selectedProduct.stripePriceId
                   : 'price_demo';
-                const qp = `?product=${selectedProduct.id}&price=${effectivePrice}`;
+                // Include the selected product ID from products page if available
+                const productParam = selectedProductId ? `&selectedProduct=${encodeURIComponent(selectedProductId)}` : '';
+                const qp = `?product=${selectedProduct.id}&price=${effectivePrice}${productParam}`;
                 setConfirmOpen(false);
                 setLocation(`/checkout${qp}`);
               }}

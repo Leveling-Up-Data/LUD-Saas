@@ -95,13 +95,9 @@ export default function Products() {
 
   const proceedToProduct = (product: Product) => {
     setSelectedProduct(product);
-    if (product.id === "starfish-slack") {
-      window.location.href =
-        "https://slack.com/oauth/v2/authorize?client_id=8395289183441.9315965017559&scope=app_mentions:read,channels:join,channels:read,chat:write,commands,files:read,files:write,groups:read,im:history,remote_files:read,mpim:history,channels:history,groups:history&user_scope=";
-    } else {
-      // navigate to pricing within SPA
-      setLocation("/pricing");
-    }
+    // Always redirect to pricing page first with product parameter
+    // User will choose a plan, complete payment, then be redirected to product setup
+    setLocation(`/pricing?product=${encodeURIComponent(product.id)}`);
   };
 
   const handleProductSelect = (product: Product) => {
