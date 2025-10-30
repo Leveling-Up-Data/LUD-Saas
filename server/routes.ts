@@ -9,8 +9,8 @@ import nodemailer from "nodemailer";
 // Initialize Stripe if API key is available
 let stripe: Stripe | null = null;
 
-// Use environment variable or fall back to provided Stripe secret key
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_51SJEwk5C8orLKCoOPHjbxWeDZrw7A8KRDBlVPwDbzsDVd9ys25bZnheziUDrBhx6gCfpQh63PwyUoYySBx8Kybex00s3PtDtrd';
+// Use environment variable for Stripe secret key
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
 if (STRIPE_SECRET_KEY) {
   // Use library default API version to avoid invalid/unknown versions
