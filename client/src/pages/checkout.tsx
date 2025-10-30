@@ -272,6 +272,9 @@ export default function Checkout() {
           const product = products.find((p: any) => p.stripePriceId === stripePriceId);
           if (product) {
             setSelectedPlan({ name: product.name, price: product.price, stripePriceId: product.stripePriceId, features: Array.isArray(product.features) ? product.features : [] });
+          } else {
+            // Fallback if product not found - use the stripePriceId from URL
+            setSelectedPlan({ name: 'Selected Plan', price: 0, stripePriceId: stripePriceId, features: [] });
           }
         } else {
           throw new Error('Failed to create subscription');
