@@ -196,6 +196,103 @@ export class PocketBaseClient extends PocketBase {
     return null;
   }
 
+  async authWithOAuth2(
+    provider: string,
+    redirectUrl?: string,
+    urlCallback?: (url: string) => void
+  ): Promise<AuthData | void> {
+    try {
+      // Use the current window URL as the default redirect if not provided
+      const defaultRedirectUrl = 
+        redirectUrl || 
+        (typeof window !== "undefined" ? window.location.href : "");
+
+      // Normalize provider name (PocketBase uses lowercase)
+      const providerName = provider.toLowerCase();
+      
+      // Try to get available auth methods, but if it fails, use provider name directly
+      let providerToUse = providerName;
+      try {
+        const authMethods = await this.collection("users").listAuthMethods();
+        console.log("Available auth providers:", authMethods.authProviders);
+        
+        // Look for the provider in the list
+        if (authMethods.authProviders && authMethods.authProviders.length > 0) {
+          const foundProvider = authMethods.authProviders.find(
+            (p: any) => {
+              const pName = String(p.name || "").toLowerCase();
+              return pName === providerName || 
+                     (pName === "google" && providerName === "google");
+            }
+          );
+          
+          if (foundProvider && foundProvider.name) {
+            providerToUse = foundProvider.name;
+            console.log(`Using OAuth provider: ${providerToUse}`);
+          } else {
+            // Provider not found in list, but try using it directly anyway
+            console.warn(`Provider "${providerName}" not found in list, trying direct use`);
+          }
+        }
+      } catch (listError) {
+        // If listing fails, just use the provider name directly - PocketBase might still work
+        console.warn("Could not list auth methods, using provider name directly:", listError);
+      }
+
+      // Start OAuth2 flow - this will redirect the user to Google
+      const authData = await this.collection("users").authWithOAuth2({
+        provider: providerToUse,
+        urlCallback: urlCallback || ((url: string) => {
+          // Open OAuth popup or redirect
+          if (typeof window !== "undefined") {
+            window.location.href = url;
+          }
+        }),
+        redirectUrl: defaultRedirectUrl,
+      });
+
+      // If urlCallback was provided and called, we'll redirect, so return void
+      if (!authData) {
+        return;
+      }
+
+      // If we get here, OAuth was successful (happens after redirect callback)
+      const userId = authData.record?.id || this.authStore.model?.id;
+      if (!userId) {
+        throw new Error("Failed to get user ID from OAuth");
+      }
+
+      // Ensure user has API token
+      try {
+        await this.ensureUserTokenForUser(userId);
+      } catch (err) {
+        console.warn("ensureUserTokenForUser failed (OAuth):", err);
+      }
+
+      const userWithSubscription = await getUserWithSubscription(this, userId);
+      if (!userWithSubscription) {
+        throw new Error("Failed to fetch user data");
+      }
+
+      return userWithSubscription;
+    } catch (error: any) {
+      const message =
+        error?.data?.message ||
+        error?.response?.data?.message ||
+        error?.message ||
+        "OAuth authentication failed";
+      
+      // Add helpful error message for provider not found
+      if (error?.message?.includes("not found") || error?.message?.includes("provider")) {
+        throw new Error(
+          `OAuth provider "${provider}" not found. Please ensure Google OAuth is properly configured and enabled in PocketBase admin panel (Settings > Auth Providers).`
+        );
+      }
+      
+      throw new Error(message);
+    }
+  }
+
   logout() {
     this.authStore.clear();
   }

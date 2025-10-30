@@ -34,7 +34,7 @@ export function AuthModal({
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithGoogle } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     username: "",
@@ -279,7 +279,28 @@ export function AuthModal({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Button type="button" variant="outline" className="w-full" disabled>
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full" 
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  await signInWithGoogle();
+                  // Note: redirect will happen, so we won't reach here
+                  onClose();
+                  if (onSuccess) onSuccess();
+                } catch (error: any) {
+                  toast({
+                    title: "Google Sign In Failed",
+                    description: error?.message || "Failed to sign in with Google. Please try again.",
+                    variant: "destructive",
+                  });
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+            >
               <Chrome className="mr-2 h-4 w-4" />
               Google
             </Button>
