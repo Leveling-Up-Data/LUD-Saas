@@ -30,6 +30,9 @@ if not STRIPE_WEBHOOK_SECRET:
 # In production, you'd store these in a database
 received_events = []
 
+# Simple in-memory store for successful payments with user details
+payments = []
+
 
 def log_event(event_type, event_data):
     """Log event details to console with formatting"""
@@ -118,6 +121,8 @@ def webhook():
             handle_payment_intent_succeeded(event_object)
         elif event_type == 'payment_intent.payment_failed':
             handle_payment_intent_failed(event_object)
+        elif event_type == 'checkout.session.completed':
+            handle_checkout_session_completed(event_object)
         else:
             print(f"ℹ️  Unhandled event type: {event_type}")
             print(f"   You can add a handler function for this event type in main.py")
@@ -160,6 +165,24 @@ def handle_payment_succeeded(invoice):
     if invoice.get('subscription'):
         print(f"   Subscription: {invoice.get('subscription')}")
 
+    # Capture user/payment details for later retrieval
+    customer_id = invoice.get('customer')
+    currency = (invoice.get('currency') or 'usd').upper()
+    email = invoice.get('customer_email')  # may be None for some invoices
+    name = None
+    details = _enrich_customer_details(customer_id, email, name)
+
+    _record_payment({
+        'source': 'invoice',
+        'invoice_id': invoice.get('id'),
+        'customer_id': customer_id,
+        'email': details.get('email'),
+        'name': details.get('name'),
+        'amount': invoice.get('amount_paid', 0),
+        'currency': currency,
+        'metadata': invoice.get('metadata', {}),
+    })
+
 
 def handle_payment_failed(invoice):
     """Handle failed payment"""
@@ -187,11 +210,92 @@ def handle_payment_intent_succeeded(payment_intent):
     print(f"   Amount: ${payment_intent.get('amount', 0) / 100:.2f}")
     print(f"   Currency: {payment_intent.get('currency', 'usd').upper()}")
 
+    # Capture user/payment details for later retrieval
+    customer_id = payment_intent.get('customer')
+    currency = (payment_intent.get('currency') or 'usd').upper()
+    charge = (payment_intent.get('charges', {}).get('data') or [{}])[0]
+    billing = charge.get('billing_details', {}) if isinstance(charge, dict) else {}
+    email = billing.get('email')
+    name = billing.get('name')
+    details = _enrich_customer_details(customer_id, email, name)
+
+    _record_payment({
+        'source': 'payment_intent',
+        'payment_intent_id': payment_intent.get('id'),
+        'customer_id': customer_id,
+        'email': details.get('email'),
+        'name': details.get('name'),
+        'amount': payment_intent.get('amount', 0),
+        'currency': currency,
+        'metadata': payment_intent.get('metadata', {}),
+    })
+
 
 def handle_payment_intent_failed(payment_intent):
     """Handle failed payment intent"""
     print(f"💳 Payment intent failed: {payment_intent.get('id')}")
     print(f"   Error: {payment_intent.get('last_payment_error', {}).get('message', 'Unknown error')}")
+
+
+def handle_checkout_session_completed(session):
+    """Handle successful Checkout session completion (one-time or subscription)."""
+    print(f"🧾 Checkout session completed: {session.get('id')}")
+    customer_id = session.get('customer')
+    customer_details = session.get('customer_details', {})
+    email = customer_details.get('email')
+    name = customer_details.get('name')
+    currency = (session.get('currency') or 'usd').upper() if session.get('currency') else 'USD'
+
+    # Amount might be present as amount_total for Checkout
+    amount = session.get('amount_total') or session.get('amount_subtotal') or 0
+
+    details = _enrich_customer_details(customer_id, email, name)
+
+    _record_payment({
+        'source': 'checkout.session',
+        'checkout_session_id': session.get('id'),
+        'payment_intent_id': session.get('payment_intent'),
+        'customer_id': customer_id,
+        'email': details.get('email'),
+        'name': details.get('name'),
+        'amount': amount,
+        'currency': currency,
+        'metadata': session.get('metadata', {}),
+        'mode': session.get('mode'),
+    })
+
+
+def _enrich_customer_details(customer_id, fallback_email=None, fallback_name=None):
+    """Fetch customer details from Stripe to fill missing email/name when possible."""
+    result = {'email': fallback_email, 'name': fallback_name}
+    if not customer_id:
+        return result
+    try:
+        # Only attempt API call if secret key is configured
+        if STRIPE_SECRET_KEY:
+            customer = stripe.Customer.retrieve(customer_id)
+            result['email'] = result.get('email') or customer.get('email')
+            result['name'] = result.get('name') or customer.get('name')
+    except Exception as e:
+        print(f"⚠️  Unable to fetch customer {customer_id} details: {e}")
+    return result
+
+
+def _record_payment(entry):
+    """Store a normalized payment record and print a concise summary."""
+    entry = {
+        **entry,
+        'recorded_at': datetime.now().isoformat(),
+    }
+    payments.append(entry)
+    try:
+        amount_dollars = (entry.get('amount', 0) or 0) / 100
+        print(
+            f"📝 Recorded payment • src={entry.get('source')} • customer={entry.get('customer_id')} "
+            f"• email={entry.get('email')} • amount=${amount_dollars:.2f} {entry.get('currency', 'USD')}"
+        )
+    except Exception:
+        pass
 
 
 @app.route('/events', methods=['GET'])
@@ -205,6 +309,23 @@ def list_events():
     })
 
 
+@app.route('/payments', methods=['GET'])
+def list_payments():
+    """Return the most recent successful payments with user details."""
+    return jsonify({
+        'total_payments': len(payments),
+        'payments': payments[-100:],  # last 100 records
+    })
+
+
+@app.route('/last_payment', methods=['GET'])
+def last_payment():
+    """Return the latest recorded payment or 404 if none yet."""
+    if not payments:
+        return jsonify({'error': 'No payment recorded yet'}), 404
+    return jsonify(payments[-1])
+
+
 @app.route('/health', methods=['GET'])
 def health():
     """Health check endpoint"""
@@ -212,7 +333,8 @@ def health():
         'status': 'healthy',
         'stripe_configured': STRIPE_SECRET_KEY is not None,
         'webhook_secret_configured': STRIPE_WEBHOOK_SECRET is not None,
-        'total_events_received': len(received_events)
+        'total_events_received': len(received_events),
+        'total_payments_recorded': len(payments),
     })
 
 
@@ -234,7 +356,7 @@ def index():
             '1. Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET environment variables',
             '2. Run: python main.py',
             '3. Use ngrok or similar to expose localhost:5000 to the internet',
-            '4. Configure Stripe webhook URL: https://your-ngrok-url.ngrok.io/webhook',
+            '4. Configure Stripe webhook URL: https://uniformly-secure-joey.ngrok-free.app/webhook',
             '5. Select all events or specific events you want to receive',
             '6. Test by creating a subscription, payment, etc. in Stripe dashboard'
         ]
@@ -242,7 +364,7 @@ def index():
 
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 6000))
     print("\n" + "=" * 80)
     print("🚀 Stripe Webhook Test Server Starting")
     print("=" * 80)
