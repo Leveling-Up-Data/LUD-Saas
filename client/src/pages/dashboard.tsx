@@ -188,72 +188,79 @@ export default function Dashboard() {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) setLocation("/");
 
-    // Check for payment success and create/update trial_usage record
+    // Check for payment success or trial activation
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("payment") === "success") {
-      const planName = urlParams.get("plan") || "Starter"; // Default to Starter if not specified
+    const isPaymentSuccess = urlParams.get("payment") === "success";
+    const isTrialActive = urlParams.get("trial") === "active";
 
-      // Get product ID from URL or sessionStorage (for Stripe payment links)
+    if (isPaymentSuccess || isTrialActive) {
+      const planName = urlParams.get("plan") || (isTrialActive ? "Free Trial" : "Starter"); // Default based on type
+
+      // Get product ID from URL or sessionStorage (for Stripe payment links or free trial)
       const productId = urlParams.get("product") || sessionStorage.getItem('pendingProductId');
 
-      // Create or update trial_usage record with plan name
-      (async () => {
-        try {
-          const userId = pb.authStore.model?.id;
-          if (!userId) return;
+      // Create or update trial_usage record with plan name (only for payment success, trial is already created)
+      if (isPaymentSuccess) {
+        (async () => {
+          try {
+            const userId = pb.authStore.model?.id;
+            if (!userId) return;
 
-          // Check if trial_usage record already exists
-          const existingTrials = await pb.collection('trial_usage').getList(1, 1, {
-            filter: `user_id = "${userId}"`,
-            sort: '-created',
-          });
-
-          const now = new Date();
-          // For paid plans, set end date to 1 month from now (or calculate based on plan)
-          const planEndDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days default
-
-          if (existingTrials.items.length > 0) {
-            // Update existing record with plan name
-            await pb.collection('trial_usage').update(existingTrials.items[0].id, {
-              name: planName,
-              trial_start_date: now.toISOString(),
-              trial_end_date: planEndDate.toISOString(),
+            // Check if trial_usage record already exists
+            const existingTrials = await pb.collection('trial_usage').getList(1, 1, {
+              filter: `user_id = "${userId}"`,
+              sort: '-created',
             });
-          } else {
-            // Create new trial_usage record with plan info
-            await pb.collection('trial_usage').create({
-              user_id: userId,
-              name: planName,
-              total_request_count: 0,
-              total_request_limit: planName === "Pro" ? 10000 : 1000, // Higher limit for Pro
-              trial_start_date: now.toISOString(),
-              trial_end_date: planEndDate.toISOString(),
+
+            const now = new Date();
+            // For paid plans, set end date to 1 month from now (or calculate based on plan)
+            const planEndDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days default
+
+            if (existingTrials.items.length > 0) {
+              // Update existing record with plan name
+              await pb.collection('trial_usage').update(existingTrials.items[0].id, {
+                name: planName,
+                trial_start_date: now.toISOString(),
+                trial_end_date: planEndDate.toISOString(),
+              });
+            } else {
+              // Create new trial_usage record with plan info
+              await pb.collection('trial_usage').create({
+                user_id: userId,
+                name: planName,
+                total_request_count: 0,
+                total_request_limit: planName === "Pro" || planName === "Professional" ? 10000 : 1000, // Higher limit for Pro
+                trial_start_date: now.toISOString(),
+                trial_end_date: planEndDate.toISOString(),
+              });
+            }
+
+            toast({
+              title: "Welcome aboard! 🎉",
+              description: `Your ${planName} plan has been activated successfully.`,
+            });
+          } catch (error: any) {
+            console.error('Error creating trial_usage record:', error);
+            toast({
+              title: "Payment Successful",
+              description: "Your subscription has been activated successfully.",
             });
           }
-
-          toast({
-            title: "Welcome aboard! 🎉",
-            description: `Your ${planName} plan has been activated successfully.`,
-          });
-        } catch (error: any) {
-          console.error('Error creating trial_usage record:', error);
-          toast({
-            title: "Payment Successful",
-            description: "Your subscription has been activated successfully.",
-          });
-        }
-      })();
+        })();
+      }
 
       // Clean up URL
       window.history.replaceState({}, "", "/dashboard");
 
       // Redirect to Slack OAuth if product is starfish-slack
-      // Check if user has active plan before redirecting
       if (productId === "starfish-slack") {
         // Clear the pending product from sessionStorage
         sessionStorage.removeItem('pendingProductId');
 
-        // Wait a moment for the trial_usage record to be created, then check if user has active plan
+        // For free trial, redirect immediately (trial is already created)
+        // For payment, wait a moment for the trial_usage record to be created
+        const delay = isTrialActive ? 0 : 1000;
+        
         setTimeout(async () => {
           try {
             const userId = pb.authStore.model?.id;
@@ -299,9 +306,10 @@ export default function Dashboard() {
               }
             }
 
-            // Only redirect if user has active plan
+            // Redirect to Slack installation page if user has active plan
             if (hasActivePlan) {
-              window.location.href = "https://leveling-up-data-dev.slack.com/oauth?client_id=8395289183441.9315965017559&scope=app_mentions%3Aread%2Cchannels%3Ajoin%2Cchannels%3Aread%2Cchat%3Awrite%2Ccommands%2Cfiles%3Aread%2Cfiles%3Awrite%2Cgroups%3Aread%2Cim%3Ahistory%2Cremote_files%3Aread%2Cmpim%3Ahistory%2Cchannels%3Ahistory%2Cgroups%3Ahistory&user_scope=&redirect_uri=&state=&granular_bot_scope=1&single_channel=0&install_redirect=&tracked=1&user_default=0&team=";
+              // Use the Slack installation URL provided by user
+              window.location.href = "https://leveling-up-data-dev.slack.com/oauth?client_id=8395289183441.9315965017559&scope=app_mentions%3Aread%2Cchannels%3Ahistory%2Cchannels%3Ajoin%2Cchannels%3Aread%2Cchat%3Awrite%2Ccommands%2Cfiles%3Aread%2Cfiles%3Awrite%2Cgroups%3Ahistory%2Cgroups%3Aread%2Cim%3Ahistory%2Cmpim%3Ahistory%2Cremote_files%3Aread%2Cusers%3Aread%2Cusers%3Aread.email&user_scope=&redirect_uri=&state=&granular_bot_scope=1&single_channel=0&install_redirect=&tracked=1&user_default=0&team=";
             } else {
               // User doesn't have active plan, show message
               toast({
@@ -312,7 +320,7 @@ export default function Dashboard() {
           } catch (error: any) {
             console.error('Error checking active plan:', error);
           }
-        }, 1000); // Wait 1 second for database operations to complete
+        }, delay);
       } else if (productId) {
         // Clear the pending product from sessionStorage for other products
         sessionStorage.removeItem('pendingProductId');

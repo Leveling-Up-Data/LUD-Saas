@@ -11,6 +11,16 @@ import type { Product } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Pricing() {
   const [location, setLocation] = useLocation();
@@ -22,6 +32,7 @@ export default function Pricing() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [trialActiveDialog, setTrialActiveDialog] = useState(false);
 
   const { toast } = useToast();
 
@@ -206,14 +217,14 @@ export default function Pricing() {
         return;
       }
 
-      // If trial already exists for user, route to dashboard
+      // If trial already exists for user, show dialog to redirect to Slack installation
       try {
         const existing = await pb.collection('trial_usage').getList(1, 1, {
           filter: `user_id = "${userId}"`,
         });
         if (existing?.items?.length > 0) {
-          toast({ title: 'Trial already active', description: 'You can start using your trial now.' });
-          setLocation('/dashboard');
+          // Show alert dialog instead of toast
+          setTrialActiveDialog(true);
           return;
         }
       } catch (_) {
@@ -233,7 +244,9 @@ export default function Pricing() {
       });
 
       toast({ title: 'Free trial started', description: 'You have 2 days and 50 total requests.' });
-      setLocation('/dashboard');
+      // Include productId in redirect if available so dashboard can redirect to Slack installation
+      const productParam = selectedProductId ? `?trial=active&product=${encodeURIComponent(selectedProductId)}` : '?trial=active';
+      setLocation(`/dashboard${productParam}`);
     } catch (error: any) {
       const message = error?.message || 'Failed to start free trial.';
       toast({ title: 'Error', description: message, variant: 'destructive' });
@@ -502,6 +515,40 @@ export default function Pricing() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Trial Already Active Alert Dialog */}
+      <AlertDialog open={trialActiveDialog} onOpenChange={setTrialActiveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Trial already active</AlertDialogTitle>
+            <AlertDialogDescription>
+              You can start using your trial now.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setTrialActiveDialog(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setTrialActiveDialog(false);
+                // Only redirect to Slack if product is starfish-slack
+                if (selectedProductId === "starfish-slack") {
+                  // Open Slack installation page in new tab
+                  const slackInstallUrl = "https://leveling-up-data-dev.slack.com/oauth?client_id=8395289183441.9315965017559&scope=app_mentions%3Aread%2Cchannels%3Ahistory%2Cchannels%3Ajoin%2Cchannels%3Aread%2Cchat%3Awrite%2Ccommands%2Cfiles%3Aread%2Cfiles%3Awrite%2Cgroups%3Ahistory%2Cgroups%3Aread%2Cim%3Ahistory%2Cmpim%3Ahistory%2Cremote_files%3Aread%2Cusers%3Aread%2Cusers%3Aread.email&user_scope=&redirect_uri=&state=&granular_bot_scope=1&single_channel=0&install_redirect=&tracked=1&user_default=0&team=";
+                  window.open(slackInstallUrl, '_blank', 'noopener,noreferrer');
+                } else {
+                  // For other products, just redirect to dashboard
+                  const productParam = selectedProductId ? `?trial=active&product=${encodeURIComponent(selectedProductId)}` : '?trial=active';
+                  setLocation(`/dashboard${productParam}`);
+                }
+              }}
+            >
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

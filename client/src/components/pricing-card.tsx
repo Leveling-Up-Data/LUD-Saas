@@ -41,8 +41,8 @@ export function PricingCard({ product, isPopular = false, onSelect }: PricingCar
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-6 flex-1 flex flex-col">
-        <ul className="space-y-4">
+      <CardContent className="flex-1 flex flex-col pb-6">
+        <ul className="space-y-4 flex-1">
           {features.map((feature, index) => (
             <li key={index} className="flex items-start">
               <Check className="h-5 w-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
@@ -53,9 +53,9 @@ export function PricingCard({ product, isPopular = false, onSelect }: PricingCar
 
         <Button
           onClick={() => onSelect(product)}
-          className={(isPopular
-            ? "w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90 shadow-lg"
-            : "w-full") + " mt-auto"}
+          className={isPopular
+            ? "w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:from-primary/90 hover:to-secondary/90 shadow-lg mt-6"
+            : "w-full mt-6"}
           variant={isPopular ? "default" : "outline"}
           data-testid={`button-select-${product.name.toLowerCase()}`}
         >
