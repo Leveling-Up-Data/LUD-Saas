@@ -320,6 +320,7 @@ export default function Support() {
             </div>
 
             <Footer />
+
             {/* Auth modal triggered when user clicks Add to Slack */}
             <AuthModal
                 open={showAuthModal}

@@ -69,7 +69,7 @@ app.get('/api/products', (req, res) => {
       priority: 3
     }
   ];
-  
+
   res.json(products);
 });
 
@@ -96,16 +96,16 @@ app.get('/api/test-performance', async (req, res) => {
     try {
       // Simulate some work
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Add some breadcrumbs
       Sentry.addBreadcrumb({
         message: 'Processing performance test',
         category: 'test',
         level: 'info',
       });
-      
+
       span.setStatus({ code: 1, message: 'ok' });
-      res.json({ 
+      res.json({
         message: 'Performance test completed',
         duration: '100ms',
         timestamp: new Date().toISOString()
@@ -121,15 +121,15 @@ app.get('/api/test-performance', async (req, res) => {
 // Test endpoint for Sentry profiling
 app.get('/api/test-profiling', (req, res) => {
   const startTime = Date.now();
-  
+
   // Simulate CPU-intensive work for profiling
   let result = 0;
   for (let i = 0; i < 1000000; i++) {
     result += Math.sqrt(i);
   }
-  
+
   const duration = Date.now() - startTime;
-  
+
   Sentry.addBreadcrumb({
     message: 'Profiling test completed',
     category: 'profiling',
@@ -140,7 +140,7 @@ app.get('/api/test-profiling', (req, res) => {
       result: result.toFixed(2)
     }
   });
-  
+
   res.json({
     message: 'Profiling test completed',
     duration: `${duration}ms`,
@@ -150,7 +150,11 @@ app.get('/api/test-profiling', (req, res) => {
 });
 
 // Serve static files from the built frontend
-app.use(express.static(path.join(__dirname, 'dist', 'public')));
+app.use(express.static(path.join(__dirname, 'dist', 'public'), {
+  // Cache assets (they have content hashes in filenames)
+  maxAge: '1y',
+  etag: true,
+}));
 
 // Serve the React app for all non-API routes (SPA fallback)
 app.get('*', (req, res) => {
@@ -158,12 +162,16 @@ app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'API endpoint not found' });
   }
-  
+
   // For all other routes, serve the React app
   const indexPath = path.join(__dirname, 'dist', 'public', 'index.html');
-  
+
   // Check if index.html exists
   if (fs.existsSync(indexPath)) {
+    // Prevent caching of HTML file to ensure users get latest version
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(indexPath);
   } else {
     // If index.html doesn't exist, return a simple HTML page

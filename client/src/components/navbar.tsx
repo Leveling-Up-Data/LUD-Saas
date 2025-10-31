@@ -30,7 +30,7 @@ export function Navbar() {
 
   const { user, isAuthenticated, signOut, loading } = useAuth();
   const [location] = useLocation();
-  const showDocs = isAuthenticated || location !== "/";
+  const showDocs = isAuthenticated;
 
   const handleSignOut = () => {
     signOut();

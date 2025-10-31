@@ -121,7 +121,7 @@ export default function Docs() {
                 Automatically applies processing if the document is scanned or
                 encrypted.
               </p>
-              <CodeBlock>{`curl -X POST "http://localhost:8000/pdf" \
+              <CodeBlock>{`curl -X POST "https://api-dev.levelingupdata.com/pdf" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -F "file=@example.pdf" \
   -F "dpi=150" \
@@ -145,7 +145,7 @@ export default function Docs() {
                 Quickly determine if a PDF is encrypted and get a sample of
                 extracted text for verification.
               </p>
-              <CodeBlock>{`curl -X POST "http://localhost:8000/check-pdf" \
+              <CodeBlock>{`curl -X POST "https://api-dev.levelingupdata.com/check-pdf" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -F "file=@example.pdf"`}</CodeBlock>
               <CodeBlock>{`{
@@ -166,7 +166,7 @@ export default function Docs() {
                 Send natural language queries to extract semantic answers from
                 the document. Useful for summaries, Q&A, and search.
               </p>
-              <CodeBlock>{`curl -X POST "http://localhost:8000/ask-pdf" \
+              <CodeBlock>{`curl -X POST "https://api-dev.levelingupdata.com/ask-pdf" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -F "file=@example.pdf" \
   -F "question=What is the summary of this pdf?"`}</CodeBlock>
@@ -189,7 +189,7 @@ export default function Docs() {
                 Ensures requests truly originate from Slack by validating
                 signatures and timestamps.
               </p>
-              <CodeBlock>{`curl -X POST "http://localhost:8000/message-verify" \
+              <CodeBlock>{`curl -X POST "https://api-dev.levelingupdata.com/message-verify" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello from Slack!", "timestamp": "2024-06-01T12:00:00Z"}'`}</CodeBlock>
@@ -210,7 +210,7 @@ export default function Docs() {
                 Confirms that form submissions are genuine before they’re stored
                 or processed.
               </p>
-              <CodeBlock>{`curl -X POST "http://localhost:8000/form-verify" \
+              <CodeBlock>{`curl -X POST "https://api-dev.levelingupdata.com/form-verify" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"form_data": {"name": "John Doe", "email": "john@example.com"}, "timestamp": "2024-06-01T12:00:00Z"}'`}</CodeBlock>
@@ -232,7 +232,7 @@ export default function Docs() {
                 healthy.
               </p>
               <CodeBlock>{`curl \
-  http://localhost:8000/health`}</CodeBlock>
+  https://api-dev.levelingupdata.com/health`}</CodeBlock>
               <CodeBlock>{`{ "status": "ok" }`}</CodeBlock>
             </Section>
           </main>
